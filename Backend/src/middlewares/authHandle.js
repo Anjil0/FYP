@@ -2,6 +2,7 @@ const createError = require("http-errors");
 const jwt = require("jsonwebtoken");
 const userModel = require("../users/userModel");
 const config = require("../config/config");
+const tutorModel = require("../tutors/tutorModel");
 
 const authenticateToken = (req, res, next) => {
   const accessToken = req.headers["authorization"];
@@ -41,14 +42,6 @@ const isAdmin = async (req, res, next) => {
   }
 };
 
-const verifyUserId = (req, res, next) => {
-  const userId = req.params.id;
-  if (req.user.sub !== userId) {
-    return next(createError(403, "Access Denied. User ID does not match."));
-  }
-  next();
-};
-
 const isUser = async (req, res, next) => {
   try {
     const user = await userModel.findById(req.user.sub);
@@ -61,14 +54,11 @@ const isUser = async (req, res, next) => {
   }
 };
 
-const isPartner = async (req, res, next) => {
+const isTutor = async (req, res, next) => {
   try {
-    const user = await userModel.findById(req.user.sub);
-    if (
-      !user ||
-      !["Institute", "Organization", "School", "College"].includes(user.type)
-    ) {
-      return next(createError(403, "Access Denied. You are not a partner."));
+    const tutor = await tutorModel.findById(req.user.sub);
+    if (!tutor || !tutor.role === "tutor") {
+      return next(createError(403, "Access Denied. You are not a Tutor."));
     }
     next();
   } catch (err) {
@@ -80,6 +70,5 @@ module.exports = {
   authenticateToken,
   isAdmin,
   isUser,
-  verifyUserId,
-  isPartner,
+  isTutor,
 };

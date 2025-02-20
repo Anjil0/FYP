@@ -3,24 +3,23 @@ const {
   authenticateToken,
   isAdmin,
   isUser,
-  verifyUserId,
-} = require("c:/Users/angil/Desktop/Internship/CTF-server-side/src/middlewares/authHandle");
+} = require("../middlewares/authHandle");
 
 const {
   registerUser,
   loginUser,
   handleLogout,
-  getAllUsers,
-  getUserById,
-  refreshAccessToken,
-  getUserSolvedQuizes,
   getUserDetails,
-  getAdminDashboard,
   toggleRole,
-  getRank,
+  verifyEmail,
+  resendVerificationCode,
+  resetPassword,
+  forgotPassword,
+  verifyResetLink,
+  updateUserDetails,
 } = require("./userController");
 
-const upload = require("c:/Users/angil/Desktop/Internship/CTF-server-side/src/middlewares/multerConfig");
+const upload = require("../middlewares/multerConfig");
 
 const userRouter = express.Router();
 
@@ -30,35 +29,20 @@ userRouter.post("/login", loginUser);
 
 userRouter.post("/logout", handleLogout);
 
-userRouter.get("/getAllUsers", authenticateToken, isAdmin, getAllUsers);
+userRouter.get("/getUserDetails/", authenticateToken, isUser, getUserDetails);
 
-userRouter.get(
-  "/profile/:id",
-  authenticateToken,
-  verifyUserId,
-  isUser,
-  getUserById
-);
+userRouter.post("/verifyEmail", verifyEmail);
 
-userRouter.get(
-  "/getUserDetails/:id",
-  authenticateToken,
-  isUser,
-  getUserDetails
-);
+userRouter.post("/forgotPassword", forgotPassword);
 
-userRouter.post("/refreshAccessToken", refreshAccessToken);
+userRouter.get("/verifyResetLink/:code", verifyResetLink);
 
-userRouter.get("/getUserSolvedQuizes/:id", getUserSolvedQuizes);
+userRouter.post("/resetPassword", resetPassword);
 
-userRouter.get(
-  "/getAdminDashboard",
-  authenticateToken,
-  isAdmin,
-  getAdminDashboard
-);
+userRouter.post("/resendCode", resendVerificationCode);
+
+userRouter.put("/updateUser", authenticateToken, isUser, updateUserDetails);
+
 userRouter.post("/toggleRole/:id", authenticateToken, toggleRole);
-
-userRouter.get("/getUserRank", authenticateToken, getRank);
 
 module.exports = userRouter;

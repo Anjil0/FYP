@@ -2,23 +2,25 @@ const createError = require("http-errors");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const userModel = require("./userModel");
-const {
-  generateAccessToken,
-  generateRefreshToken,
-} = require("../src/utils/auth");
-const config = require("../src/config/config");
 const mongoose = require("mongoose");
-const { uploadToCloudinary, getFilePath } = require("../src/utils/fileUpload");
+const { uploadToCloudinary, getFilePath } = require("../utils/fileUpload");
+const { generateAccessToken } = require("../utils/auth");
+const { sendVerificationMail } = require("../config/mail");
+const { sendPasswordResetEmail } = require("../config/mail");
+const tutorModel = require("../tutors/tutorModel");
 
 const usernameRegex = /^[a-zA-Z0-9._-]{3,20}$/;
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const phoneRegex = /^[0-9]{10}$/;
 const passwordRegex =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+const generateVerificationCode = () =>
+  Math.floor(100000 + Math.random() * 900000).toString();
 
 const registerUser = async (req, res, next) => {
-  const { fullname, username, email, password } = req.body;
+  const { username, email, password, grade, phoneNumber, address } = req.body;
 
-  if (!fullname || !username || !email || !password) {
+  if (!username || !email || !password || !grade || !phoneNumber || !address) {
     const error = createError(400, "All fields are required.");
     return next(error);
   }
@@ -41,6 +43,13 @@ const registerUser = async (req, res, next) => {
     return next(error);
   }
 
+  if (!phoneRegex.test(phoneNumber)) {
+    const error = createError(
+      400,
+      "Invalid phone number format. Must be 10 digits."
+    );
+    return next(error);
+  }
   try {
     const existingUsername = await userModel.findOne({ username });
     if (existingUsername) {
@@ -61,21 +70,31 @@ const registerUser = async (req, res, next) => {
       const imageMimeType = req.file.mimetype.split("/").pop();
       imageUrl = await uploadToCloudinary(
         imagePath,
-        "profile-images",
+        "TutorEase/ProfileImages",
         req.file.filename,
         imageMimeType
       );
     }
+
+    const verficationToken = generateVerificationCode();
+    const verificationCodeExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
     const newUser = await userModel.create({
       username,
       email,
       password: hashedPassword,
+      grade,
+      phoneNumber,
+      address,
+      verificationCode: verficationToken,
+      verificationCodeExpiresAt,
       image: imageUrl,
     });
 
+    await sendVerificationMail(newUser.email, verficationToken);
+
     const userObj = newUser.toObject();
     delete userObj.password;
-
     res.status(200).json({
       StatusCode: 200,
       IsSuccess: true,
@@ -86,7 +105,126 @@ const registerUser = async (req, res, next) => {
       },
     });
   } catch (error) {
-    next(createError(500, "Server Error while creating new user."));
+    fs.unlinkSync(getFilePath(req.file.filename));
+    next(createError(500, `Server Error while creating new user.${error}`));
+  }
+};
+
+const verifyEmail = async (req, res, next) => {
+  const { email, verificationCode } = req.body;
+
+  if (!email || !verificationCode) {
+    return next(createError(400, "Email and verification code are required."));
+  }
+
+  try {
+    const user = await userModel.findOne({ email });
+    const tutor = user ? null : await tutorModel.findOne({ email });
+
+    const account = user || tutor;
+
+    if (!account) {
+      return next(createError(400, "Account not found."));
+    }
+
+    if (account.isEmailVerified) {
+      return next(createError(400, "Email is already verified."));
+    }
+
+    if (account.verificationCode !== verificationCode) {
+      return next(createError(400, "Invalid verification code."));
+    }
+
+    if (new Date() > new Date(account.verificationCodeExpiresAt)) {
+      return next(
+        createError(
+          400,
+          "Verification code has expired. Please request a new one."
+        )
+      );
+    }
+
+    account.isEmailVerified = true;
+    account.verificationCode = null;
+    account.verificationCodeExpiresAt = null;
+    await account.save();
+
+    const accessToken = generateAccessToken(account._id);
+
+    res.cookie("accessToken", accessToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "Strict",
+      maxAge: 30 * 60 * 1000,
+    });
+
+    const accountData = account.toObject();
+    delete accountData.password;
+
+    res.status(200).json({
+      StatusCode: 200,
+      IsSuccess: true,
+      ErrorMessage: [],
+      Result: {
+        message: "Email verified successfully!",
+        accessToken: accessToken,
+        account_data: accountData,
+        userRole: account.role,
+      },
+    });
+  } catch (error) {
+    next(createError(500, "Error verifying email."));
+  }
+};
+
+const resendVerificationCode = async (req, res, next) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return next(createError(400, "Email is required."));
+  }
+
+  try {
+    const user = await userModel.findOne({ email });
+    if (!user) {
+      return next(createError(400, "User not found."));
+    }
+
+    if (user.isEmailVerified) {
+      return next(createError(400, "Email is already verified."));
+    }
+
+    if (
+      user.verificationCodeExpiresAt &&
+      new Date() > new Date(user.verificationCodeExpiresAt)
+    ) {
+      user.verificationCode = null;
+      user.verificationCodeExpiresAt = null;
+    }
+
+    const verificationCode = generateVerificationCode();
+    const verificationCodeExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    user.verificationCodeExpiresAt = verificationCodeExpiresAt;
+    user.verificationCode = verificationCode.toString();
+
+    await user.save();
+
+    await sendVerificationMail(user.email, verificationCode);
+
+    res.status(200).json({
+      StatusCode: 200,
+      IsSuccess: true,
+      ErrorMessage: [],
+      Result: {
+        message:
+          "Verification code resent successfully. Please check your email.",
+      },
+    });
+  } catch (error) {
+    next(
+      createError(500, `Error resending verification code.${error.message}`)
+    );
   }
 };
 
@@ -98,47 +236,44 @@ const loginUser = async (req, res, next) => {
   }
 
   try {
-    let user = await userModel.findOne({ email });
-    let isNewUser = false;
-
-    if (!user) {
-      let partner = await partnerModel.findOne({ email });
-      if (partner) {
-        if (partner.status === "active") {
-          user = partner;
-          isPartner = true;
-        } else {
-          return next(
-            createError(400, "Partner must be Verified by administrator!")
-          );
-        }
-      }
+    let account = await userModel.findOne({ email });
+    const isUser = Boolean(account);
+    if (!account) {
+      account = await tutorModel.findOne({ email });
     }
 
-    if (!user) {
-      return next(createError(400, "User or Partner not found!"));
+    if (!account) {
+      return next(createError(400, "Account not found!"));
     }
 
-    const passMatch = await bcrypt.compare(password, user.password);
+    const passMatch = await bcrypt.compare(password, account.password);
     if (!passMatch) {
-      return next(createError(400, "Incorrect email and password!"));
+      return next(createError(400, "Incorrect email or password!"));
     }
 
-    if (!user.lastLogin) {
-      isNewUser = true;
+    if (!account.isEmailVerified) {
+      const verificationToken = generateVerificationCode();
+      const verificationCodeExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+      account.verificationCode = verificationToken;
+      account.verificationCodeExpiresAt = verificationCodeExpiresAt;
+
+      await account.save();
+      await sendVerificationMail(account.email, verificationToken);
+
+      return res.status(403).json({
+        StatusCode: 403,
+        IsSuccess: false,
+        ErrorMessage: [
+          { message: "Email not verified. Verification email resent." },
+        ],
+        Result: {
+          redirect: "/verify",
+        },
+      });
     }
 
-    user.lastLogin = new Date();
-
-    const accessToken = generateAccessToken(user._id);
-    const refreshToken = generateRefreshToken(user._id);
-
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "Strict",
-      maxAge: 24 * 60 * 60 * 1000,
-    });
+    const accessToken = generateAccessToken(account._id);
 
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
@@ -147,229 +282,132 @@ const loginUser = async (req, res, next) => {
       maxAge: 30 * 60 * 1000,
     });
 
-    try {
-      await user.save();
-    } catch (error) {
-      console.log(error);
-      return next(createError(500, "Error saving user/partner after login."));
-    }
-
-    const userObj = user.toObject();
-    delete userObj.password;
+    const accountData = account.toObject();
+    delete accountData.password;
 
     res.status(200).json({
       StatusCode: 200,
       IsSuccess: true,
       ErrorMessage: [],
       Result: {
-        message: isNewUser
-          ? "Welcome, new user! Login Successful"
-          : "Login Successfully",
+        message: "Login successful",
         accessToken: accessToken,
-        refreshToken: refreshToken,
-        user_data: {
-          ...userObj,
-          progress: user.progress,
-          isPartner: isPartner,
-          isNewUser: isNewUser,
-        },
+        userRole: account.role,
+        account_data: accountData,
       },
     });
   } catch (error) {
-    return next(createError(500, "Server error while login."));
+    return next(createError(500, "Server error while logging in."));
   }
 };
 
-const refreshAccessToken = async (req, res, next) => {
-  const incomingRefreshToken = req.body.refreshToken;
-  if (!incomingRefreshToken) {
-    return next(
-      createError(400, "Unauthorized request: No refresh token provided")
-    );
+const forgotPassword = async (req, res, next) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return next(createError(400, "Email is required"));
   }
-
-  let decodedToken;
-  try {
-    decodedToken = jwt.verify(incomingRefreshToken, config.refreshTokenSecret);
-  } catch (error) {
-    return next(createError(400, "Invalid access token"));
-  }
-
-  const userId = decodedToken.sub;
-
-  const newAccessToken = generateAccessToken(userId);
-
-  res.cookie("accessToken", newAccessToken, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "Strict",
-    maxAge: 30 * 60 * 1000,
-  });
-
-  res.status(200).json({
-    accessToken: newAccessToken,
-  });
-};
-
-const getAllUsers = async (req, res, next) => {
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 10;
-
-  if (limit > 10) {
-    return res.status(400).json({
-      StatusCode: 400,
-      IsSuccess: false,
-      ErrorMessage: "Limit cannot exceed more than 10",
-    });
-  }
-  const skip = (page - 1) * limit;
 
   try {
-    const users = await userModel.aggregate([
-      { $skip: skip },
-      { $limit: limit },
-      {
-        $project: {
-          fullname: 1,
-          role: 1,
-          username: 1,
-          flagCaptured: 1,
-          Level: 1,
-        },
-      },
-    ]);
-
-    const totalUsers = await userModel.countDocuments();
-    const totalPages = Math.ceil(totalUsers / limit);
-
-    if (!totalUsers) {
-      return next(createError(400, `No users available`));
+    let account = await userModel.findOne({ email });
+    if (!account) {
+      account = await tutorModel.findOne({ email });
     }
 
-    if (page > totalPages) {
-      return next(createError(400, `Invalid Page Number`));
+    if (!account) {
+      return next(createError(400, "No account found with this email address"));
     }
 
-    const formattedUsers = {
-      users: users.filter((user) => user.role !== "admin"),
-      admin: users.filter((user) => user.role === "admin"),
-    };
+    if (
+      account.lastPasswordResetRequest &&
+      new Date() - new Date(account.lastPasswordResetRequest) < 15 * 60 * 1000
+    ) {
+      return next(
+        createError(
+          400,
+          "A password reset request was recently made. Please try later."
+        )
+      );
+    }
 
-    const currentPageSize = users.length;
+    const resetCode = generateVerificationCode();
+    const resetCodeExpires = new Date(Date.now() + 3600000);
 
-    res.json({
+    account.resetPasswordCode = resetCode;
+    account.resetPasswordCodeExpires = resetCodeExpires;
+    account.lastPasswordResetRequest = new Date();
+    await account.save();
+
+    await sendPasswordResetEmail(account.email, resetCode);
+
+    res.status(200).json({
       StatusCode: 200,
       IsSuccess: true,
       ErrorMessage: [],
       Result: {
-        message: "Successfully fetched all users",
-        data: formattedUsers,
-        pagination: {
-          totalUsers,
-          totalPages,
-          currentPage: page,
-          pageSize: currentPageSize,
-        },
+        message: "Password reset email sent. Please check your inbox.",
       },
     });
   } catch (error) {
-    return next(
-      createError(500, `Server error while fetching users. ${error.message}`)
-    );
+    next(createError(500, `Error requesting password reset`, error.message));
+  }
+};
+
+const resetPassword = async (req, res, next) => {
+  const { resetCode, newPassword } = req.body;
+
+  if (!newPassword) {
+    return next(createError(400, "New password is required"));
+  }
+
+  try {
+    let account = await userModel.findOne({ resetPasswordCode: resetCode });
+    if (!account) {
+      account = await tutorModel.findOne({ resetPasswordCode: resetCode });
+    }
+
+    if (!account) {
+      return next(createError(400, "Reset code is invalid."));
+    }
+
+    if (new Date() > new Date(account.resetPasswordCodeExpires)) {
+      return next(createError(400, "Reset link has expired"));
+    }
+
+    if (resetCode !== account.resetPasswordCode) {
+      return next(createError(400, "Reset code is invalid"));
+    }
+
+    const isSamePassword = await bcrypt.compare(newPassword, account.password);
+    if (isSamePassword) {
+      return next(
+        createError(400, "New password cannot be the same as the old password")
+      );
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    account.password = hashedPassword;
+    account.resetPasswordCode = null;
+    account.resetPasswordCodeExpires = null;
+    await account.save();
+
+    res.status(200).json({
+      StatusCode: 200,
+      IsSuccess: true,
+      Result: {
+        message: "Password has been reset successfully.",
+      },
+    });
+  } catch (error) {
+    next(createError(500, "Error resetting password"));
   }
 };
 
 const getUserDetails = async (req, res, next) => {
-  const userId = req.params.id;
-
+  const userId = req.user.sub;
   try {
-    const userProfile = await userModel.aggregate([
-      { $match: { _id: new mongoose.Types.ObjectId(userId) } },
-      {
-        $project: {
-          username: 1,
-          country: 1,
-          Level: 1,
-          Rank: 1,
-          solvedQuizzes: 1,
-          image: 1,
-        },
-      },
-      {
-        $lookup: {
-          from: "questions",
-          localField: "solvedQuizzes",
-          foreignField: "quiz._id",
-          as: "solvedQuizzes",
-        },
-      },
-      {
-        $lookup: {
-          from: "topics",
-          localField: "solvedQuizzes.topic",
-          foreignField: "_id",
-          as: "topics",
-        },
-      },
-      {
-        $addFields: {
-          topics: {
-            $map: {
-              input: "$topics",
-              as: "topic",
-              in: {
-                _id: "$$topic._id",
-                topic: "$$topic.topic",
-                description: "$$topic.description",
-                difficulty: "$$topic.difficulty",
-                totalQuizzes: {
-                  $size: {
-                    $filter: {
-                      input: "$solvedQuizzes",
-                      as: "quiz",
-                      cond: { $eq: ["$$quiz.topic", "$$topic._id"] },
-                    },
-                  },
-                },
-                solvedQuizIds: {
-                  $size: {
-                    $filter: {
-                      input: "$solvedQuizzes",
-                      as: "quiz",
-                      cond: {
-                        $and: [
-                          { $eq: ["$$quiz.topic", "$$topic._id"] },
-                          { $in: ["$$quiz._id", "$solvedQuizzes._id"] },
-                        ],
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-      {
-        $addFields: {
-          completedTopics: {
-            $size: {
-              $filter: {
-                input: "$topics",
-                as: "topic",
-                cond: {
-                  $eq: ["$$topic.solvedQuizIds", "$$topic.totalQuizzes"],
-                },
-              },
-            },
-          },
-        },
-      },
-      { $unset: "topics" },
-      { $unset: "solvedQuizzes" },
-    ]);
-
-    if (!userProfile || userProfile.length === 0) {
+    const userProfile = await userModel.findById(userId).select("-password");
+    if (!userProfile) {
       return next(createError(404, "User not found"));
     }
 
@@ -379,7 +417,7 @@ const getUserDetails = async (req, res, next) => {
       ErrorMessage: [],
       Result: {
         message: "Successfully fetched user details",
-        userData: userProfile[0],
+        userData: userProfile,
       },
     });
   } catch (error) {
@@ -400,7 +438,14 @@ const options = {
 
 const handleLogout = async (req, res, next) => {
   try {
-    res.clearCookie("refreshToken", options);
+    const options = {
+      httpOnly: true,
+      secure: true,
+      sameSite: "Strict",
+      path: "/",
+      maxAge: 0,
+    };
+
     res.clearCookie("accessToken", options);
 
     if (req.session) {
@@ -429,30 +474,6 @@ const handleLogout = async (req, res, next) => {
     }
   } catch (error) {
     next(createError(500, `Server error while logging out. ${error.message}`));
-  }
-};
-
-const getUserById = async (req, res, next) => {
-  const userId = req.params.id;
-  try {
-    const user = await userModel.findById(userId);
-    const userObj = user.toObject();
-    delete userObj.password;
-
-    if (!user) {
-      return next(createError(400, "User not found."));
-    }
-    res.json({
-      StatusCode: 200,
-      IsSuccess: true,
-      ErrorMessage: [],
-      Result: {
-        message: "User fetched successfully",
-        user_data: userObj,
-      },
-    });
-  } catch (error) {
-    return next(createError(500, "Server error while fetch user by ID."));
   }
 };
 
@@ -488,13 +509,104 @@ const toggleRole = async (req, res, next) => {
   }
 };
 
+const verifyResetLink = async (req, res, next) => {
+  const { code } = req.params;
+
+  if (!code) {
+    return next(createError(400, "Reset code is required"));
+  }
+
+  try {
+    let account = await userModel.findOne({
+      resetPasswordCode: code,
+      resetPasswordCodeExpires: { $gt: new Date() },
+    });
+
+    if (!account) {
+      account = await tutorModel.findOne({
+        resetPasswordCode: code,
+        resetPasswordCodeExpires: { $gt: new Date() },
+      });
+    }
+
+    if (!account) {
+      return next(createError(400, "Invalid or expired reset link"));
+    }
+
+    res.status(200).json({
+      StatusCode: 200,
+      IsSuccess: true,
+      ErrorMessage: [],
+      Result: {
+        message: "Valid reset code",
+      },
+    });
+  } catch (error) {
+    next(createError(500, "Error verifying reset code"));
+  }
+};
+
+const updateUserDetails = async (req, res, next) => {
+  const userId = req.user.sub;
+  const { username, grade, phoneNumber, address } = req.body;
+
+  if (!username || !grade || !phoneNumber || !address) {
+    return next(createError(400, "All fields are required"));
+  }
+
+  if (!usernameRegex.test(username)) {
+    return next(
+      createError(
+        400,
+        "Username must be alphanumeric and between 3 to 20 characters long."
+      )
+    );
+  }
+
+  if (!phoneRegex.test(phoneNumber)) {
+    return next(
+      createError(400, "Invalid phone number format. Must be 10 digits.")
+    );
+  }
+
+  try {
+    const user = await userModel.findById(userId);
+    if (!user) {
+      return next(createError(400, "User not found"));
+    }
+
+    user.username = username;
+    user.grade = grade;
+    user.phoneNumber = phoneNumber;
+    user.address = address;
+    await user.save();
+
+    res.status(200).json({
+      StatusCode: 200,
+      IsSuccess: true,
+      ErrorMessage: [],
+      Result: {
+        message: "User details updated successfully",
+        userData: user,
+      },
+    });
+  } catch (error) {
+    next(
+      createError(500, `Server error while updating user details. ${error}`)
+    );
+  }
+};
+
 module.exports = {
   registerUser,
+  resendVerificationCode,
+  verifyEmail,
+  forgotPassword,
+  resetPassword,
+  verifyResetLink,
   loginUser,
   handleLogout,
-  getAllUsers,
   getUserDetails,
-  getUserById,
-  refreshAccessToken,
   toggleRole,
+  updateUserDetails,
 };
