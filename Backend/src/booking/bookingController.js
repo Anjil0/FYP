@@ -345,7 +345,7 @@ const getStudentChatBookings = async (req, res, next) => {
 
   try {
     const bookings = await bookingModel
-      .find({ studentId })
+      .find({ studentId, status: { $ne: "cancelled" } })
       .populate({
         path: "tutorId",
         model: "Tutor",
@@ -462,7 +462,7 @@ const getTutorChatBookings = async (req, res, next) => {
 
   try {
     const bookings = await bookingModel
-      .find({ tutorId })
+      .find({ tutorId, status: { $ne: "cancelled" } })
       .populate({
         path: "studentId",
         model: "User",
@@ -486,6 +486,7 @@ const getTutorChatBookings = async (req, res, next) => {
     }
 
     const firstBooking = bookings[0];
+
     const specificTimeSlot = firstBooking.timeSlotId?.timeSlots?.find(
       (slot) =>
         slot._id.toString() === firstBooking.specificTimeSlotId.toString()

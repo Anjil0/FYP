@@ -1,3 +1,4 @@
+
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import SignupPage from "./pages/Signup";
 import LoginPage from "./pages/Login.jsx";
@@ -33,6 +34,7 @@ import socket from "./socket";
 import StudentMessagePage from "./pages/StudentMessage.jsx";
 import TutorMessagePage from "./pages/TutorMessage.jsx";
 import { isValidToken } from "./authUtils/authUtils.js";
+import VideoCall from "./components/VideoCall.jsx";
 
 const App = () => {
   const registerSocket = () => {
@@ -127,6 +129,15 @@ const App = () => {
           />
 
           {/* Auth routes - only accessible when logged in */}
+
+          <Route
+            path="/Session"
+            element={
+              <ProtectedRoute>
+                <VideoCall />
+              </ProtectedRoute>
+            }
+          />
 
           <Route
             path="/Stdprofile"

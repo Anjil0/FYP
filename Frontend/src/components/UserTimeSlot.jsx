@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Calendar, Clock } from "lucide-react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { disableScroll, enableScroll } from "./../utils/ScrollLock";
+import { disableScroll, enableScroll } from "../utils/ScrollLock";
 
 // eslint-disable-next-line react/prop-types
 const TimeSlotBooking = ({ tutorId }) => {

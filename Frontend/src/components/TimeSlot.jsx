@@ -3,7 +3,7 @@ import axios from "axios";
 import { toast } from "sonner";
 import { X, Globe } from "lucide-react";
 import baseUrl from "/src/config/config";
-import { disableScroll, enableScroll } from "./../utils/ScrollLock";
+import { disableScroll, enableScroll } from "../utils/ScrollLock";
 // eslint-disable-next-line react/prop-types
 const TimeSlotModal = ({ isOpen, onClose, editingSlot = null }) => {
   const [formData, setFormData] = useState({

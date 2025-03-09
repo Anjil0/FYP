@@ -13,6 +13,7 @@ const bookingRouter = require("./booking/bookingRouter");
 const paymentRouter = require("./payment/paymentRouter");
 const messageRouter = require("./message/messageRouter");
 const notificationRouter = require("./notification/notificationRouter");
+const sessionRouter = require("./session/sessionRouter");
 
 const corsOptions = {
   origin: "http://localhost:5173",
@@ -38,6 +39,7 @@ app.use("/api/bookings", bookingRouter);
 app.use("/api/payments", paymentRouter);
 app.use("/api/messages", messageRouter);
 app.use("/api/notifications", notificationRouter);
+app.use("/api/sessions", sessionRouter);
 
 app.use(globalErrorHandler);
 

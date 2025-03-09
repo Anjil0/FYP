@@ -39,43 +39,6 @@ const StudentMessagePage = () => {
     </div>
   );
 
-  const MessageInput = () => (
-    <form onSubmit={sendMessage} className="flex items-center gap-3">
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleImageUpload}
-        accept="image/*"
-        className="hidden"
-      />
-      <button
-        type="button"
-        onClick={() => fileInputRef.current?.click()}
-        className="p-2.5 hover:bg-gray-100 rounded-xl transition-colors"
-      >
-        <ImageIcon className="w-5 h-5 text-gray-500" />
-      </button>
-      <input
-        type="text"
-        value={newMessage}
-        onChange={handleMessageChange}
-        placeholder="Type your message..."
-        className="flex-1 px-4 py-3 bg-gray-50 rounded-xl border-0
-                 focus:ring-2 focus:ring-blue-500 focus:bg-white 
-                 transition-all text-sm"
-      />
-      <button
-        type="submit"
-        disabled={!newMessage.trim()}
-        className="p-3 bg-blue-500 rounded-xl text-white hover:bg-blue-600 
-                 disabled:opacity-50 disabled:cursor-not-allowed 
-                 transition-colors"
-      >
-        <Send className="w-5 h-5" />
-      </button>
-    </form>
-  );
-
   const MessagesList = () => (
     <div className="space-y-4">
       {messages.map((message) => (
@@ -505,7 +468,43 @@ const StudentMessagePage = () => {
 
                   {/* Message Input */}
                   <div className="p-4 bg-white border-t border-gray-100">
-                    <MessageInput />
+                    <form
+                      onSubmit={sendMessage}
+                      className="flex items-center gap-3"
+                    >
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleImageUpload}
+                        accept="image/*"
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="p-2.5 hover:bg-gray-100 rounded-xl transition-colors"
+                      >
+                        <ImageIcon className="w-5 h-5 text-gray-500" />
+                      </button>
+                      <input
+                        type="text"
+                        value={newMessage}
+                        onChange={handleMessageChange}
+                        placeholder="Type your message..."
+                        className="flex-1 px-4 py-3 bg-gray-50 rounded-xl border-0
+                 focus:ring-2 focus:ring-blue-500 focus:bg-white 
+                 transition-all text-sm"
+                      />
+                      <button
+                        type="submit"
+                        disabled={!newMessage.trim()}
+                        className="p-3 bg-blue-500 rounded-xl text-white hover:bg-blue-600 
+                 disabled:opacity-50 disabled:cursor-not-allowed 
+                 transition-colors"
+                      >
+                        <Send className="w-5 h-5" />
+                      </button>
+                    </form>
                   </div>
                 </>
               ) : (

@@ -188,10 +188,10 @@ const TutorListing = () => {
         <p className="text-gray-600 mb-6 line-clamp-2">{tutor.description}</p>
 
         <div className="flex gap-4">
-          <button className="flex-1 bg-blue-500 text-white py-2.5 px-4 rounded-lg hover:bg-blue-600 transition-all duration-300 flex items-center justify-center gap-2 transform hover:-translate-y-0.5">
+          {/* <button className="flex-1 bg-blue-500 text-white py-2.5 px-4 rounded-lg hover:bg-blue-600 transition-all duration-300 flex items-center justify-center gap-2 transform hover:-translate-y-0.5">
             <Mail className="w-4 h-4" />
             Contact
-          </button>
+          </button> */}
           <button
             onClick={() => navigate(`/tutors/${tutor._id}`)}
             className="flex-1 border border-blue-500 text-blue-500 py-2.5 px-4 rounded-lg hover:bg-blue-50 transition-colors duration-300 flex items-center justify-center gap-2"
