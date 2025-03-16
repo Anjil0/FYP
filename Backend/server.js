@@ -1,7 +1,6 @@
 const app = require("./src/app");
 const connectDB = require("./src/config/dbConnect");
 const http = require("http");
-const config = require("./src/config/config");
 const initializeSockets = require("./socket");
 
 const startServer = async () => {
