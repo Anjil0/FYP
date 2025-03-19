@@ -93,7 +93,7 @@ const StudentDashboard = () => {
     // Check if current time is within the window
     // const isActive = now >= fiveMinsBefore && now <= fiveMinsAfter;
 
-    // For testing purposes, you can use this to always show the button
+    // For testing purposes,
     const isActive = true;
     
     return isActive;
@@ -118,7 +118,7 @@ const StudentDashboard = () => {
           anotherPersonName: session.anotherPersonName,
         },
       });
-    }, 2000); // Reduced from 5000 for better UX
+    }, 2000); 
   };
 
   const generateRoomIdForSession = (session) => {

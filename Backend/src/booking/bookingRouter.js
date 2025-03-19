@@ -10,6 +10,7 @@ const {
   getTutorBookings,
   cancelBooking,
 } = require("./bookingController");
+
 const {
   authenticateToken,
   isTutor,

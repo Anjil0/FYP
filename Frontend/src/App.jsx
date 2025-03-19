@@ -1,4 +1,3 @@
-
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import SignupPage from "./pages/Signup";
 import LoginPage from "./pages/Login.jsx";
@@ -35,6 +34,10 @@ import StudentMessagePage from "./pages/StudentMessage.jsx";
 import TutorMessagePage from "./pages/TutorMessage.jsx";
 import { isValidToken } from "./authUtils/authUtils.js";
 import VideoCall from "./components/VideoCall.jsx";
+import CreateAssignment from "./components/CreateAssignment.jsx";
+import AssignmentsDashboard from "./pages/Assignment.jsx";
+import AssignmentDetailPage from "./components/SpecifiAssignment.jsx";
+import EditAssignment from "./components/EditAssignment.jsx";
 
 const App = () => {
   const registerSocket = () => {
@@ -132,6 +135,7 @@ const App = () => {
 
           <Route
             path="/Session"
+            allowedRoles={["user", "Tutor"]}
             element={
               <ProtectedRoute>
                 <VideoCall />
@@ -192,6 +196,38 @@ const App = () => {
             element={
               <ProtectedRoute allowedRoles={["tutor"]}>
                 <TutorBookingRequests />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/tutorAssignment"
+            element={
+              <ProtectedRoute allowedRoles={["tutor"]}>
+                <AssignmentsDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/assignments/create"
+            element={
+              <ProtectedRoute allowedRoles={["tutor"]}>
+                <CreateAssignment />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/assignments/edit/:id"
+            element={
+              <ProtectedRoute allowedRoles={["tutor"]}>
+                <EditAssignment />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/assignments/:id"
+            element={
+              <ProtectedRoute allowedRoles={["tutor"]}>
+                <AssignmentDetailPage />
               </ProtectedRoute>
             }
           />

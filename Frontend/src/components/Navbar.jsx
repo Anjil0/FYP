@@ -277,7 +277,7 @@ const Navbar = () => {
         { href: "/students", text: "My Students" },
         { href: "/tutorChat", text: "Message" },
         { href: "/tutorTimeSlot", text: "TimeSlots" },
-        { href: "/Tassignments", text: "Assignments" },
+        { href: "/tutorAssignment", text: "Assignments" },
       ];
     }
     return [

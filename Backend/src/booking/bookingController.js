@@ -30,6 +30,24 @@ const createBooking = async (req, res, next) => {
       return next(createError(400, "Time slot not found"));
     }
 
+    const subjectName = timeSlot.subjectName;
+
+    const existingBooking = await bookingModel.findOne({
+      studentId,
+      tutorId,
+      subjectName,
+      status: { $nin: ["cancelled", "completed"] }, 
+    });
+
+    if (existingBooking) {
+      return next(
+        createError(
+          400,
+          "You already have an active booking for this subject with this tutor."
+        )
+      );
+    }
+
     // Find the specific time slot and check if it's already booked
     const specificSlot = timeSlot.timeSlots.id(specificTimeSlotId);
     if (!specificSlot || specificSlot.isBooked) {

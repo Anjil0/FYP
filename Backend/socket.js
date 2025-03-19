@@ -13,6 +13,7 @@ module.exports = (server) => {
   // Initialize Socket.IO with CORS configuration
   const io = socketIo(server, {
     cors: {
+      // origin: "http://192.168.18.3:5173",
       origin: "http://localhost:5173",
       methods: ["GET", "POST"],
       allowedHeaders: ["Content-Type"],
@@ -348,7 +349,7 @@ module.exports = (server) => {
           .length
       } online users`
     );
-  }, 6000);
+  }, 60000);
 
   return { io, userSocketMap, userStatusMap };
 };

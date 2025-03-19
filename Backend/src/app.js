@@ -14,8 +14,10 @@ const paymentRouter = require("./payment/paymentRouter");
 const messageRouter = require("./message/messageRouter");
 const notificationRouter = require("./notification/notificationRouter");
 const sessionRouter = require("./session/sessionRouter");
+const assignmentRouter = require("./assignments/assignmentsRouter");
 
 const corsOptions = {
+  // origin: "http://192.168.18.3:5173",
   origin: "http://localhost:5173",
   credentials: true,
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
@@ -40,6 +42,7 @@ app.use("/api/payments", paymentRouter);
 app.use("/api/messages", messageRouter);
 app.use("/api/notifications", notificationRouter);
 app.use("/api/sessions", sessionRouter);
+app.use("/api/assignments", assignmentRouter);
 
 app.use(globalErrorHandler);
 
