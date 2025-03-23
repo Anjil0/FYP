@@ -2,6 +2,8 @@ const app = require("./src/app");
 const connectDB = require("./src/config/dbConnect");
 const http = require("http");
 const initializeSockets = require("./socket");
+const checkOverdueAssignments = require("./src/cronJobs/assignmentCron");
+const updateBookingStatuses = require("./src/cronJobs/bookingCron");
 
 const startServer = async () => {
   try {
@@ -19,26 +21,26 @@ const startServer = async () => {
     app.set("userStatusMap", userStatusMap);
 
     server.listen(port, () => {
-      console.log(`Server is running on port: http://localhost:${port}`);
+      console.log(`🚀 Server is running on: http://localhost:${port}`);
     });
-    // server.listen(port, "0.0.0.0", () => {
-    //   console.log(`Server is running on port: http://192.168.18.3:${port}`);
-    // });
-    
+
+    // Start the assignment overdue check cron job
+    checkOverdueAssignments();
+    updateBookingStatuses();
   } catch (error) {
-    console.error("Failed to start the server:", error);
+    console.error("❌ Failed to start the server:", error);
     process.exit(1);
   }
 };
 
 // Handle errors
 process.on("uncaughtException", (error) => {
-  console.error("Uncaught Exception:", error);
+  console.error("🔥 Uncaught Exception:", error);
   process.exit(1);
 });
 
 process.on("unhandledRejection", (reason, promise) => {
-  console.error("Unhandled Rejection at:", promise, "reason:", reason);
+  console.error("🚨 Unhandled Rejection at:", promise, "reason:", reason);
   process.exit(1);
 });
 

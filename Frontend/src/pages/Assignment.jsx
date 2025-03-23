@@ -88,7 +88,19 @@ const AssignmentsDashboard = () => {
     });
   };
 
-  const getDaysRemaining = (dueDate) => {
+  const getDaysRemaining = (dueDate, assignment) => {
+    if (assignment.status === "completed" || assignment.status === "reviewed") {
+      return {
+        text: `Submitted`,
+        class: "text-indigo-600 font-medium",
+      };
+    }
+    if (assignment.status === "unsubmitted") {
+      return {
+        text: `Times Up Unsubmitted`,
+        class: "text-red-600 font-medium",
+      };
+    }
     const today = new Date();
     const due = new Date(dueDate);
     const diffTime = due - today;
@@ -155,6 +167,16 @@ const AssignmentsDashboard = () => {
             </button>
             <button
               className={`py-4 px-6 text-sm font-medium transition-colors ${
+                activeTab === "submitted"
+                  ? "border-b-2 border-indigo-500 text-indigo-600 bg-white"
+                  : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+              onClick={() => handleTabChange("submitted")}
+            >
+              Submitted
+            </button>
+            <button
+              className={`py-4 px-6 text-sm font-medium transition-colors ${
                 activeTab === "completed"
                   ? "border-b-2 border-indigo-500 text-indigo-600 bg-white"
                   : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -162,6 +184,26 @@ const AssignmentsDashboard = () => {
               onClick={() => handleTabChange("completed")}
             >
               Completed
+            </button>
+            <button
+              className={`py-4 px-6 text-sm font-medium transition-colors ${
+                activeTab === "reviewed"
+                  ? "border-b-2 border-indigo-500 text-indigo-600 bg-white"
+                  : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+              onClick={() => handleTabChange("reviewed")}
+            >
+              Reviewed
+            </button>
+            <button
+              className={`py-4 px-6 text-sm font-medium transition-colors ${
+                activeTab === "unsubmitted"
+                  ? "border-b-2 border-indigo-500 text-indigo-600 bg-white"
+                  : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+              onClick={() => handleTabChange("unsubmitted")}
+            >
+              Not Submitted
             </button>
           </div>
         </div>
@@ -260,13 +302,30 @@ const AssignmentsDashboard = () => {
                             {formatDueDate(assignment.dueDate)}
                           </div>
                           <div className="flex items-center text-sm">
-                            <Clock className="h-4 w-4 mr-1" />
+                            {assignment.status === "completed" ||
+                            assignment.status === "reviewed" ||
+                            assignment.status === "unsubmitted" ? (
+                              <div>
+                                {" "}
+                                <CheckCircle className="h-4 w-4 mr-1 text-green-500" />
+                              </div>
+                            ) : (
+                              <div>
+                                {" "}
+                                <Clock className="h-4 w-4 mr-1" />
+                              </div>
+                            )}
+
                             <span
                               className={
-                                getDaysRemaining(assignment.dueDate).class
+                                getDaysRemaining(assignment.dueDate, assignment)
+                                  .class
                               }
                             >
-                              {getDaysRemaining(assignment.dueDate).text}
+                              {
+                                getDaysRemaining(assignment.dueDate, assignment)
+                                  .text
+                              }
                             </span>
                           </div>
                         </div>
@@ -363,7 +422,11 @@ const AssignmentsDashboard = () => {
               <div>
                 <p className="text-sm text-gray-500">Pending</p>
                 <p className="text-xl font-semibold">
-                  {assignments.filter((a) => a.status === "assigned").length}
+                  {
+                    assignments.filter(
+                      (a) => a.status === "assigned" || a.status === "submitted"
+                    ).length
+                  }
                 </p>
               </div>
             </div>
@@ -382,7 +445,32 @@ const AssignmentsDashboard = () => {
               </div>
             </div>
           </div>
-
+          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+            <div className="flex items-center">
+              <div className="rounded-full p-2 bg-green-100 mr-3">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Reviewed</p>
+                <p className="text-xl font-semibold">
+                  {assignments.filter((a) => a.status === "reviewed").length}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+            <div className="flex items-center">
+              <div className="rounded-full p-2 bg-green-100 mr-3">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Not Submitted</p>
+                <p className="text-xl font-semibold">
+                  {assignments.filter((a) => a.status === "unsubmitted").length}
+                </p>
+              </div>
+            </div>
+          </div>
           <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
             <div className="flex items-center">
               <div className="rounded-full p-2 bg-purple-100 mr-3">

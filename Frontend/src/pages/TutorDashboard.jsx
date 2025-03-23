@@ -216,10 +216,10 @@ const TutorDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Toaster position="top-right" />
 
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-700 to-blue-900 shadow-md">
+      <Toaster richColors />
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between py-6">
             <div>

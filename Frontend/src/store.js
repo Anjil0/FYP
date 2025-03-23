@@ -37,7 +37,7 @@ export const useAuthStore = create((set) => ({
         } else if (userRole === "tutor") {
           navigate("/tutorDashboard");
         } else {
-          navigate("/home");
+          navigate("/");
         }
       } else if (
         response.data.StatusCode === 403 &&

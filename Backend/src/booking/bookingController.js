@@ -36,7 +36,7 @@ const createBooking = async (req, res, next) => {
       studentId,
       tutorId,
       subjectName,
-      status: { $nin: ["cancelled", "completed"] }, 
+      status: { $nin: ["cancelled", "completed"] },
     });
 
     if (existingBooking) {
@@ -413,6 +413,44 @@ const getStudentChatBookings = async (req, res, next) => {
   }
 };
 
+const getAllTutors = async (req, res, next) => {
+  try {
+    const studentId = req.user.sub;
+
+    // Fetch active bookings for the student and populate tutor details
+    const bookings = await bookingModel
+      .find({ isActive: true, studentId: studentId })
+      .populate("tutorId", "username");
+
+    if (!bookings.length) {
+      return next(createError(400, "No tutors found"));
+    }
+
+    const tutorMap = new Map();
+    bookings.forEach((booking) => {
+      const tutor = booking.tutorId;
+      if (tutor) {
+        tutorMap.set(tutor._id.toString(), {
+          tutorId: tutor._id,
+          tutorName: tutor.username,
+        });
+      }
+    });
+
+    const tutors = Array.from(tutorMap.values());
+
+    res.status(200).json({
+      StatusCode: 200,
+      IsSuccess: true,
+      ErrorMessage: [],
+      Result: { tutors },
+    });
+  } catch (error) {
+    console.error("Get All Tutors Error:", error);
+    return next(createError(500, "Server Error while fetching tutors"));
+  }
+};
+
 const getTutorBookings = async (req, res, next) => {
   const tutorId = req.user.sub;
 
@@ -546,4 +584,5 @@ module.exports = {
   getStudentChatBookings,
   getTutorChatBookings,
   getTutorBookings,
+  getAllTutors,
 };

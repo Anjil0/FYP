@@ -49,6 +49,7 @@ const assignmentSchema = new mongoose.Schema(
       },
     ],
     submission: {
+      remarks: String,
       attachments: [
         {
           fileName: String,
@@ -68,27 +69,12 @@ const assignmentSchema = new mongoose.Schema(
     },
     feedback: {
       content: String,
-      grade: Number,
-      attachments: [
-        {
-          fileName: String,
-          fileUrl: String,
-          uploadedAt: {
-            type: Date,
-            default: Date.now,
-          },
-        },
-      ],
+      grade: String,
       providedAt: Date,
     },
     status: {
       type: String,
-      enum: [
-        "assigned",
-        "submitted",
-        "reviewed",
-        "overdue",
-      ],
+      enum: ["assigned", "submitted", "unsubmitted", "reviewed", "completed"],
       default: "assigned",
     },
     isActive: {

@@ -38,6 +38,8 @@ import CreateAssignment from "./components/CreateAssignment.jsx";
 import AssignmentsDashboard from "./pages/Assignment.jsx";
 import AssignmentDetailPage from "./components/SpecifiAssignment.jsx";
 import EditAssignment from "./components/EditAssignment.jsx";
+import StudentAssignmentPage from "./components/StudentAsignment.jsx";
+import StdSpecificAssignment from "./components/StdSpecificAssignment.jsx";
 
 const App = () => {
   const registerSocket = () => {
@@ -188,6 +190,22 @@ const App = () => {
             element={
               <ProtectedRoute allowedRoles={["user"]}>
                 <StudentMessagePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/stdAssignments"
+            element={
+              <ProtectedRoute allowedRoles={["user"]}>
+                <StudentAssignmentPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/stdAssignment/:assignmentId"
+            element={
+              <ProtectedRoute allowedRoles={["user"]}>
+                <StdSpecificAssignment />
               </ProtectedRoute>
             }
           />

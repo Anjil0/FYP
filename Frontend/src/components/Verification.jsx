@@ -110,10 +110,20 @@ const Verification = () => {
         toast.success(response.data.Result.message);
         const { accessToken } = response.data.Result;
         localStorage.setItem("accessToken", accessToken);
+        const userRole = response.data.Result.userRole;
+        localStorage.setItem("userRole", userRole);
         // Clear resend timer data on successful verification
         localStorage.removeItem("resendTimer");
         localStorage.removeItem("resendTimestamp");
-        navigate("/home");
+        if (userRole === "admin") {
+          navigate("/adminDashboard");
+        } else if (userRole === "user") {
+          navigate("/stdDashboard");
+        } else if (userRole === "tutor") {
+          navigate("/tutorDashboard");
+        } else {
+          navigate("/");
+        }
       } else {
         toast.error("Invalid verification code. Please try again.");
       }

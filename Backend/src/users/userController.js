@@ -2,6 +2,7 @@ const createError = require("http-errors");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const userModel = require("./userModel");
+const fs = require("fs");
 const mongoose = require("mongoose");
 const { uploadToCloudinary, getFilePath } = require("../utils/fileUpload");
 const { generateAccessToken } = require("../utils/auth");

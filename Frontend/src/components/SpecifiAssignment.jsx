@@ -1,8 +1,7 @@
-/* eslint-disable react/no-unescaped-entities */
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { toast } from "sonner";
+import { toast, Toaster } from "sonner";
 import {
   Paperclip,
   User,
@@ -19,6 +18,7 @@ import {
   ArrowLeft,
   ChevronRight,
   Edit,
+  XCircle,
   Send,
   AlertCircle,
 } from "lucide-react";
@@ -33,6 +33,8 @@ const AssignmentDetailPage = () => {
   const [activeTab, setActiveTab] = useState("details");
   const [feedbackText, setFeedbackText] = useState("");
   const [feedbackGrade, setFeedbackGrade] = useState(null);
+  const [submittingFeedback, setSubmittingFeedback] = useState(false);
+  const [isEditingFeedback, setIsEditingFeedback] = useState(false);
 
   const token = localStorage.getItem("accessToken");
 
@@ -117,7 +119,7 @@ const AssignmentDetailPage = () => {
             No Assignment Found
           </h2>
           <p className="text-gray-600">
-            The assignment you're looking for doesn't exist.
+            The assignment you&apos;re looking for doesn&apos;t exist.
           </p>
           <button
             onClick={() => navigate(-1)}
@@ -132,6 +134,8 @@ const AssignmentDetailPage = () => {
 
   // Helper function to format date
   const formatDate = (dateString) => {
+    if (!dateString) return "Unsubmited";
+
     const date = new Date(dateString);
 
     return date
@@ -145,13 +149,29 @@ const AssignmentDetailPage = () => {
       .replace(",", " at");
   };
 
-  // Calculate due status
   const getDueStatus = () => {
+    if (
+      assignmentData.status === "completed" ||
+      assignmentData.status === "reviewed"
+    ) {
+      return {
+        text: "Assignment completed",
+        color: "text-green-400",
+      };
+    }
+    if (assignmentData.status === "unsubmitted") {
+      return {
+        text: "",
+        color: "text-red-700",
+      };
+    }
+
     const now = new Date();
     const dueDate = new Date(assignmentData.dueDate);
     const timeDiff = dueDate - now;
 
     if (timeDiff <= 0) {
+      // If assignment is past due but not completed
       const daysPast = Math.abs(Math.floor(timeDiff / (1000 * 60 * 60 * 24)));
       return {
         text: `Overdue by ${daysPast} day${daysPast !== 1 ? "s" : ""}`,
@@ -183,7 +203,9 @@ const AssignmentDetailPage = () => {
 
   // Get file icon based on type
   const getFileIcon = (fileType) => {
-    switch (fileType) {
+    if (!fileType) return <Paperclip className="text-gray-500" />;
+
+    switch (fileType.toLowerCase()) {
       case "pdf":
         return <FileText className="text-red-500" />;
       case "image":
@@ -208,7 +230,7 @@ const AssignmentDetailPage = () => {
             {attachment.fileName}
           </span>
           <p className="text-xs text-gray-500">
-            {attachment.fileType.toUpperCase()} •{" "}
+            {attachment.fileType?.toUpperCase() || "FILE"} •{" "}
             {new Date(attachment.uploadedAt).toLocaleDateString()}
           </p>
         </div>
@@ -228,7 +250,7 @@ const AssignmentDetailPage = () => {
   );
 
   // Handle providing feedback
-  const handleProvideFeedback = () => {
+  const handleProvideFeedback = async () => {
     // Check if student has submitted any work
     if (!assignmentData.submission?.attachments?.length) {
       toast.error("Cannot provide feedback until student submits work", {
@@ -247,16 +269,61 @@ const AssignmentDetailPage = () => {
       return;
     }
 
-    console.log("Providing feedback:", { feedbackText, feedbackGrade });
+    try {
+      setSubmittingFeedback(true);
 
-    toast.success("Feedback submitted successfully", {
-      description: "Student will be notified of your feedback",
-      icon: <CheckCircle className="text-green-500" />,
-    });
+      const response = await axios.post(
+        `${baseUrl}/api/assignments/feedback/${id}`,
+        {
+          content: feedbackText,
+          grade: feedbackGrade || null,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.data.IsSuccess) {
+        toast.success("Feedback submitted successfully", {
+          description: "Student will be notified of your feedback",
+          icon: <CheckCircle className="text-green-500" />,
+        });
+
+        // Refresh the assignment data
+        const updatedResponse = await axios.get(
+          `${baseUrl}/api/assignments/getSpecificAssignment/${id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (updatedResponse.data.IsSuccess) {
+          setAssignmentData(updatedResponse.data.Result);
+          setFeedbackText("");
+          setFeedbackGrade(null);
+        }
+      } else {
+        throw new Error(
+          response.data.ErrorMessage?.[0] || "Failed to submit feedback"
+        );
+      }
+    } catch (err) {
+      toast.error("Failed to submit feedback", {
+        description: err.message || "Please try again later",
+        icon: <AlertCircle className="text-red-500" />,
+      });
+    } finally {
+      setSubmittingFeedback(false);
+    }
   };
 
   return (
     <div className="bg-blue-50 min-h-screen pb-8">
+      <Toaster richColors />
       <div className="max-w-6xl mx-auto pt-6 px-4 sm:px-6">
         {/* Breadcrumb */}
         <div className="flex items-center text-sm text-gray-500 mb-4">
@@ -285,11 +352,9 @@ const AssignmentDetailPage = () => {
 
             <div className="relative z-10">
               <div className="flex justify-between items-center mb-4">
-                <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium inline-flex items-center">
-                  <Clock className="w-3 h-3 mr-1" />
-                  Assigned
+                <div className={`font-bold ${dueStatus.color}`}>
+                  {dueStatus.text}
                 </div>
-                <div className="text-red-400 font-bold">{dueStatus.text}</div>
               </div>
 
               <h1 className="text-3xl font-bold mb-6">
@@ -486,7 +551,8 @@ const AssignmentDetailPage = () => {
                             </p>
                           </div>
 
-                          {assignmentData.status === "completed" ? (
+                          {assignmentData.status === "completed" ||
+                          assignmentData.status === "reviewed" ? (
                             <div className="relative">
                               <div className="absolute -left-[17px] w-8 h-8 rounded-full bg-green-100 border-2 border-green-500 flex items-center justify-center">
                                 <CheckCircle className="w-4 h-4 text-green-500" />
@@ -495,7 +561,21 @@ const AssignmentDetailPage = () => {
                                 Assignment Completed
                               </h4>
                               <p className="text-sm ml-6 text-gray-500 mt-1">
-                                Mar 15, 2025 at 2:30 PM
+                                {formatDate(
+                                  assignmentData.submission?.submittedAt
+                                )}
+                              </p>
+                            </div>
+                          ) : assignmentData.status === "unsubmitted" ? (
+                            <div className="relative">
+                              <div className="absolute -left-[17px] w-8 h-8 rounded-full bg-red-100 border-2 border-red-500 flex items-center justify-center">
+                                <XCircle className="w-4 h-4 text-red-500" />
+                              </div>
+                              <h4 className="text-md ml-6 font-medium text-red-500">
+                                Assignment Unsubmitted
+                              </h4>
+                              <p className="text-sm ml-6 text-red-500 mt-1">
+                                No submission received
                               </p>
                             </div>
                           ) : (
@@ -528,7 +608,8 @@ const AssignmentDetailPage = () => {
                       </span>
                     </h2>
 
-                    {assignmentData.attachments.length > 0 ? (
+                    {assignmentData.attachments &&
+                    assignmentData.attachments.length > 0 ? (
                       <div className="space-y-2">
                         {assignmentData.attachments.map(renderAttachment)}
                       </div>
@@ -563,13 +644,65 @@ const AssignmentDetailPage = () => {
                                 Submission Received
                               </p>
                               <p className="text-green-600 text-sm">
-                                Student has submitted their work
+                                Submitted{" "}
+                                {formatDate(
+                                  assignmentData.submission.submittedAt
+                                )}
                               </p>
                             </div>
                           </div>
                         </div>
 
-                        {/* Submission content would go here */}
+                        {/* Student's remarks */}
+                        {assignmentData.submission.remarks && (
+                          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-4">
+                            <h3 className="text-md font-medium text-gray-800 mb-2">
+                              Student&apos;s Remarks:
+                            </h3>
+                            <p className="text-gray-700 whitespace-pre-line">
+                              {assignmentData.submission.remarks}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Submission attachments */}
+                        <div>
+                          <h3 className="text-md font-medium text-gray-800 mb-3">
+                            Submitted Files:
+                          </h3>
+                          <div className="space-y-2">
+                            {assignmentData.submission.attachments.map(
+                              renderAttachment
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ) : assignmentData.status === "unsubmitted" ? (
+                      <div className="space-y-6">
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                          <div className="flex items-center">
+                            <Clock className="text-yellow-500 w-6 h-6 mr-3" />
+                            <div>
+                              <p className="text-yellow-700 font-medium">
+                                No Submission
+                              </p>
+                              <p className="text-yellow-600 text-sm">
+                                Student hasn&apos;t submitted their work
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
+                          <Send className="mx-auto h-16 w-16 text-gray-300 mb-4" />
+                          <p className="text-gray-700 text-lg font-medium">
+                            No Submission Received
+                          </p>
+                          <p className="text-gray-500 text-sm mt-1 mb-6">
+                            The student hasn&apos;t uploaded any files for this
+                            assignment
+                          </p>
+                        </div>
                       </div>
                     ) : (
                       <div className="space-y-6">
@@ -581,7 +714,7 @@ const AssignmentDetailPage = () => {
                                 Awaiting Submission
                               </p>
                               <p className="text-yellow-600 text-sm">
-                                Student hasn't submitted their work yet
+                                Student hasn&apos;t submitted their work yet
                               </p>
                             </div>
                             <div className="ml-auto">
@@ -606,7 +739,7 @@ const AssignmentDetailPage = () => {
                             No Submission Yet
                           </p>
                           <p className="text-gray-500 text-sm mt-1 mb-6">
-                            The student hasn't uploaded any files for this
+                            The student hasn&apos;t uploaded any files for this
                             assignment
                           </p>
                         </div>
@@ -633,7 +766,19 @@ const AssignmentDetailPage = () => {
                   <div className="bg-green-50 rounded-lg p-3 mb-5">
                     <p className="text-sm text-green-700 flex items-center">
                       <CheckCircle className="w-4 h-4 mr-2 text-green-500" />
-                      Student has submitted their work Provide Feedback
+                      Student has submitted their work
+                    </p>
+                  </div>
+                ) : assignmentData.status === "unsubmitted" ? (
+                  <div className="bg-yellow-50 rounded-lg p-3 mb-5">
+                    <div className="flex justify-between items-center">
+                      <p className="text-sm text-yellow-700 flex items-center">
+                        <XCircle className="w-4 h-4 mr-2 text-yellow-500" />
+                        Student did not submit their work
+                      </p>
+                    </div>
+                    <p className="text-xs ml-6 text-yellow-600 mt-1">
+                      Feedback cannot be provided
                     </p>
                   </div>
                 ) : (
@@ -650,69 +795,144 @@ const AssignmentDetailPage = () => {
                   </div>
                 )}
 
-                {/* Feedback form */}
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Feedback
-                    </label>
-                    <textarea
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      rows="6"
-                      placeholder="Write your feedback here..."
-                      value={feedbackText}
-                      onChange={(e) => setFeedbackText(e.target.value)}
-                    ></textarea>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Grade (optional)
-                    </label>
-                    <select
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      value={feedbackGrade || ""}
-                      onChange={(e) => setFeedbackGrade(e.target.value)}
-                    >
-                      <option value="">Select a grade</option>
-                      <option value="A">A - Excellent</option>
-                      <option value="B">B - Good</option>
-                      <option value="C">C - Satisfactory</option>
-                      <option value="D">D - Needs Improvement</option>
-                      <option value="F">F - Unsatisfactory</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Attach Files (optional)
-                    </label>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                      <Paperclip className="mx-auto h-8 w-8 text-gray-400 mb-2" />
-                      <p className="text-sm text-gray-500">
-                        Drag files here or click to browse
+                {/* Display existing feedback if available */}
+                {assignmentData.feedback && assignmentData.feedback.content && (
+                  <div className="mb-5 p-4 bg-blue-50 rounded-lg border border-blue-100">
+                    <h3 className="text-md font-medium text-gray-800 mb-2 flex items-center">
+                      <MessageSquare className="w-4 h-4 mr-2 text-blue-500" />
+                      Your Feedback
+                    </h3>
+                    <p className="text-gray-700 whitespace-pre-line mb-2">
+                      {assignmentData.feedback.content}
+                    </p>
+                    {assignmentData.feedback.grade && (
+                      <div className="mt-2">
+                        <span className="text-sm font-medium text-gray-700">
+                          Grade:{" "}
+                        </span>
+                        <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-medium">
+                          {assignmentData.feedback.grade}
+                        </span>
+                      </div>
+                    )}
+                    <div className="mt-3 text-right">
+                      <p className="text-xs text-gray-500">
+                        Provided on{" "}
+                        {formatDate(assignmentData.feedback.providedAt)}
                       </p>
-                      <button className="mt-2 text-sm text-blue-600 hover:text-blue-700">
-                        Browse Files
+                    </div>
+                  </div>
+                )}
+
+                {/* Feedback form */}
+                {!assignmentData.feedback?.content || isEditingFeedback ? (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Feedback
+                      </label>
+                      <textarea
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        rows="6"
+                        placeholder="Write your feedback here..."
+                        value={feedbackText}
+                        onChange={(e) => setFeedbackText(e.target.value)}
+                      ></textarea>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Grade (optional)
+                      </label>
+                      <select
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        value={feedbackGrade || ""}
+                        onChange={(e) => setFeedbackGrade(e.target.value)}
+                      >
+                        <option value="">Select a grade</option>
+                        <option value="A">A - Excellent</option>
+                        <option value="B">B - Good</option>
+                        <option value="C">C - Satisfactory</option>
+                        <option value="D">D - Needs Improvement</option>
+                        <option value="F">F - Unsatisfactory</option>
+                      </select>
+                    </div>
+
+                    <div className="flex gap-3">
+                      {isEditingFeedback && (
+                        <button
+                          onClick={() => {
+                            // Reset the form and exit editing mode
+                            setIsEditingFeedback(false);
+                            setFeedbackText(
+                              assignmentData.feedback?.content || ""
+                            );
+                            setFeedbackGrade(
+                              assignmentData.feedback?.grade || null
+                            );
+                          }}
+                          className="w-1/2 py-3 bg-gray-200 text-gray-700 rounded-lg flex items-center justify-center font-medium hover:bg-gray-300 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      )}
+
+                      <button
+                        onClick={handleProvideFeedback}
+                        disabled={
+                          assignmentData.status === "unsubmitted" ||
+                          !assignmentData.submission?.attachments?.length ||
+                          submittingFeedback
+                        }
+                        className={`${
+                          isEditingFeedback ? "w-1/2" : "w-full"
+                        } py-3 rounded-lg flex items-center justify-center font-medium transition-colors ${
+                          assignmentData.status === "unsubmitted"
+                            ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                            : assignmentData.submission?.attachments?.length &&
+                              !submittingFeedback
+                            ? "bg-blue-500 text-white hover:bg-blue-600"
+                            : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                        }`}
+                      >
+                        {submittingFeedback ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Submitting...
+                          </>
+                        ) : (
+                          <>
+                            <MessageSquare className="w-4 h-4 mr-2" />
+                            {assignmentData.status === "unsubmitted"
+                              ? "Cannot Provide Feedback"
+                              : assignmentData.submission?.attachments?.length
+                              ? isEditingFeedback
+                                ? "Update"
+                                : "Provide Feedback"
+                              : "Awaiting Submission"}
+                          </>
+                        )}
                       </button>
                     </div>
                   </div>
+                ) : (
+                  <div className="mt-4">
+                    <button
+                      onClick={() => {
+                        // Set editing mode to true
+                        setIsEditingFeedback(true);
 
-                  <button
-                    onClick={handleProvideFeedback}
-                    className={`w-full py-3 rounded-lg flex items-center justify-center font-medium transition-colors ${
-                      assignmentData.submission?.attachments?.length
-                        ? "bg-blue-500 text-white hover:bg-blue-600"
-                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                    }`}
-                    disabled={!assignmentData.submission?.attachments?.length}
-                  >
-                    <MessageSquare className="w-4 h-4 mr-2" />
-                    {assignmentData.submission?.attachments?.length
-                      ? "Provide Feedback"
-                      : "Awaiting Submission"}
-                  </button>
-                </div>
+                        // Populate form with existing feedback
+                        setFeedbackText(assignmentData.feedback.content);
+                        setFeedbackGrade(assignmentData.feedback.grade || "");
+                      }}
+                      className="w-full py-3 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center font-medium hover:bg-blue-100 transition-colors"
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      Edit Feedback
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

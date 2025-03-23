@@ -7,6 +7,7 @@ const {
   getTutorChatBookings,
   updatePhysicalPaymentStatus,
   getStudentBookings,
+  getAllTutors,
   getTutorBookings,
   cancelBooking,
 } = require("./bookingController");
@@ -48,6 +49,8 @@ bookingRouter.get(
   isUser,
   getStudentBookings
 );
+
+bookingRouter.get("/getAllTutors/", authenticateToken, isUser, getAllTutors);
 
 bookingRouter.get(
   "/getStudentChatBookings",

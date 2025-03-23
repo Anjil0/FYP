@@ -146,6 +146,7 @@ const StudentDashboard = () => {
 
     return (
       <div className="border border-blue-100 rounded-lg p-4 bg-gradient-to-r from-blue-50 to-white shadow-sm hover:shadow transition-all">
+      <Toaster richColors />
         <div className="flex items-start justify-between">
           <div>
             <h3 className="font-semibold text-lg text-blue-800">{bookName}</h3>

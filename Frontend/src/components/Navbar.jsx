@@ -7,7 +7,7 @@ import baseUrl from "./../config/config";
 import { isValidToken } from "../authUtils/authUtils";
 import { useLocation } from "react-router-dom";
 import socket from "../socket";
-import { toast, Toaster } from "sonner";
+import { toast } from "sonner";
 import { format } from "date-fns";
 
 const NotificationButton = ({
@@ -264,7 +264,7 @@ const Navbar = () => {
       return [
         { href: "/stdDashboard", text: "Dashboard" },
         { href: "/tutors", text: "Find Tutors" },
-        { href: "/myAssignments", text: "My Assignments" },
+        { href: "/stdAssignments", text: "My Assignments" },
         { href: "/stdChat", text: "Message" },
         { href: "/Mybookings", text: "My Bookings" },
       ];
@@ -290,7 +290,6 @@ const Navbar = () => {
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
-      <Toaster />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-[4.5rem] items-center">
           {/* Left: Logo and Navigation */}

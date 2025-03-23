@@ -8,6 +8,7 @@ const {
   getFilePath,
   extractPublicId,
 } = require("../utils/fileUpload");
+const { assign } = require("nodemailer/lib/shared");
 
 // Create a new assignment (tutor only)
 const createAssignment = async (req, res, next) => {
@@ -132,142 +133,6 @@ const createAssignment = async (req, res, next) => {
       return next(createError(400, error.message));
     }
     next(createError(500, "Server error while creating assignment"));
-  }
-};
-
-// Get all assignments for a student
-const getStudentAssignments = async (req, res, next) => {
-  try {
-    const userId = req.user?.sub;
-    const { status } = req.query;
-
-    if (!userId) {
-      return next(createError(401, "Unauthorized access"));
-    }
-
-    const query = { studentId: userId, isActive: true };
-
-    if (status) {
-      query.status = status;
-    }
-
-    const assignments = await Assignment.find(query)
-      .populate("tutorId", "username profilePicture")
-      .populate("bookingId", "timeSlotId")
-      .sort({ createdAt: -1 });
-
-    res.status(200).json({
-      StatusCode: 200,
-      IsSuccess: true,
-      ErrorMessage: [],
-      Result: assignments,
-    });
-  } catch (error) {
-    console.error("Get Student Assignments Error:", error);
-    next(createError(500, "Server error while fetching assignments"));
-  }
-};
-
-// Get all assignments created by a tutor
-const getTutorAssignments = async (req, res, next) => {
-  try {
-    const userId = req.user?.sub;
-    const { status } = req.query;
-
-    const query = { tutorId: userId, isActive: true };
-
-    if (status) {
-      query.status = status;
-    }
-
-    const assignments = await Assignment.find(query)
-      .populate("studentId", "username profilePicture")
-      .sort({ createdAt: -1 });
-
-    res.status(200).json({
-      StatusCode: 200,
-      IsSuccess: true,
-      ErrorMessage: [],
-      Result: assignments,
-    });
-  } catch (error) {
-    console.error("Get Tutor Assignments Error:", error);
-    next(createError(500, "Server error while fetching assignments"));
-  }
-};
-
-// Get assignments for a specific booking
-const getBookingAssignments = async (req, res, next) => {
-  try {
-    const userId = req.user?.sub;
-    const { bookingId } = req.params;
-
-    if (!userId) {
-      return next(createError(401, "Unauthorized access"));
-    }
-
-    // Verify the booking belongs to this user (either as student or tutor)
-    const booking = await Booking.findOne({
-      _id: bookingId,
-      $or: [{ studentId: userId }, { tutorId: userId }],
-    });
-
-    if (!booking) {
-      return next(
-        createError(404, "Booking not found or you don't have permission")
-      );
-    }
-
-    const assignments = await Assignment.find({
-      bookingId,
-      isActive: true,
-    }).sort({ createdAt: -1 });
-
-    res.status(200).json({
-      StatusCode: 200,
-      IsSuccess: true,
-      ErrorMessage: [],
-      Result: assignments,
-    });
-  } catch (error) {
-    console.error("Get Booking Assignments Error:", error);
-    next(createError(500, "Server error while fetching assignments"));
-  }
-};
-
-// Get a specific assignment by ID
-const getAssignmentById = async (req, res, next) => {
-  try {
-    const userId = req.user?.sub;
-    const { assignmentId } = req.params;
-
-    if (!userId) {
-      return next(createError(401, "Unauthorized access"));
-    }
-
-    const assignment = await Assignment.findOne({
-      _id: assignmentId,
-      $or: [{ studentId: userId }, { tutorId: userId }],
-      isActive: true,
-    })
-      .populate("studentId", "username profilePicture")
-      .populate("tutorId", "username profilePicture");
-
-    if (!assignment) {
-      return next(
-        createError(404, "Assignment not found or you don't have permission")
-      );
-    }
-
-    res.status(200).json({
-      StatusCode: 200,
-      IsSuccess: true,
-      ErrorMessage: [],
-      Result: assignment,
-    });
-  } catch (error) {
-    console.error("Get Assignment By ID Error:", error);
-    next(createError(500, "Server error while fetching assignment"));
   }
 };
 
@@ -417,12 +282,164 @@ const updateAssignment = async (req, res, next) => {
   }
 };
 
-// Submit an assignment (student only)
-const submitAssignment = async (req, res, next) => {
+// Get all assignments created by a tutor
+const getTutorAssignments = async (req, res, next) => {
+  try {
+    const userId = req.user?.sub;
+    const { status } = req.query;
+
+    const query = { tutorId: userId, isActive: true };
+
+    if (status) {
+      query.status = status;
+    }
+
+    const assignments = await Assignment.find(query)
+      .populate("studentId", "username profilePicture")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      StatusCode: 200,
+      IsSuccess: true,
+      ErrorMessage: [],
+      Result: assignments,
+    });
+  } catch (error) {
+    console.error("Get Tutor Assignments Error:", error);
+    next(createError(500, "Server error while fetching assignments"));
+  }
+};
+
+// // Get all assignments for a student
+// const getStudentAssignments = async (req, res, next) => {
+//   try {
+//     const userId = req.user?.sub;
+//     const { status } = req.query;
+
+//     const query = { studentId: userId, isActive: true };
+
+//     if (status) {
+//       query.status = status;
+//     }
+
+//     const assignments = await Assignment.find(query)
+//       .populate("tutorId", "username profilePicture")
+//       .sort({ createdAt: -1 });
+
+//     res.status(200).json({
+//       StatusCode: 200,
+//       IsSuccess: true,
+//       ErrorMessage: [],
+//       Result: assignments,
+//     });
+//   } catch (error) {
+//     console.error("Get Student Assignments Error:", error);
+//     next(createError(500, "Server error while fetching assignments"));
+//   }
+// };
+
+// Get allAssignmentBySpecificTutor - Opened
+const getOpenAssignments = async (req, res, next) => {
+  try {
+    const userId = req.user?.sub;
+
+    const { tutorID } = req.params;
+    const query = {
+      studentId: userId,
+      tutorId: tutorID,
+      isActive: true,
+      status: { $in: ["assigned", "submitted"] },
+    };
+
+    const assignments = await Assignment.find(query)
+      .populate("studentId", "username profilePicture")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      StatusCode: 200,
+      IsSuccess: true,
+      ErrorMessage: [],
+      Result: assignments,
+    });
+  } catch (error) {
+    console.error("Get All Assignment By Specific Tutor Error:", error);
+    next(createError(500, "Server error while fetching assignments"));
+  }
+};
+
+// Get allAssignmentBySpecificTutor - Closed
+const getClosedAssignments = async (req, res, next) => {
+  try {
+    const userId = req.user?.sub;
+
+    const { tutorID } = req.params;
+    const query = {
+      studentId: userId,
+      tutorId: tutorID,
+      isActive: true,
+      status: { $in: ["overdue", "unsubmitted", "completed"] },
+    };
+
+    const assignments = await Assignment.find(query)
+      .populate("studentId", "username profilePicture")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      StatusCode: 200,
+      IsSuccess: true,
+      ErrorMessage: [],
+      Result: assignments,
+    });
+  } catch (error) {
+    console.error("Get All Closed Assignment Tutor Error:", error);
+    next(createError(500, "Server error while fetching assignments"));
+  }
+};
+
+// Get assignments for a specific booking
+const getBookingAssignments = async (req, res, next) => {
+  try {
+    const userId = req.user?.sub;
+    const { bookingId } = req.params;
+
+    if (!userId) {
+      return next(createError(401, "Unauthorized access"));
+    }
+
+    // Verify the booking belongs to this user (either as student or tutor)
+    const booking = await Booking.findOne({
+      _id: bookingId,
+      $or: [{ studentId: userId }, { tutorId: userId }],
+    });
+
+    if (!booking) {
+      return next(
+        createError(404, "Booking not found or you don't have permission")
+      );
+    }
+
+    const assignments = await Assignment.find({
+      bookingId,
+      isActive: true,
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json({
+      StatusCode: 200,
+      IsSuccess: true,
+      ErrorMessage: [],
+      Result: assignments,
+    });
+  } catch (error) {
+    console.error("Get Booking Assignments Error:", error);
+    next(createError(500, "Server error while fetching assignments"));
+  }
+};
+
+// Get a specific assignment by ID
+const getAssignmentById = async (req, res, next) => {
   try {
     const userId = req.user?.sub;
     const { assignmentId } = req.params;
-    const { content, attachments } = req.body;
 
     if (!userId) {
       return next(createError(401, "Unauthorized access"));
@@ -430,9 +447,11 @@ const submitAssignment = async (req, res, next) => {
 
     const assignment = await Assignment.findOne({
       _id: assignmentId,
-      studentId: userId,
+      $or: [{ studentId: userId }, { tutorId: userId }],
       isActive: true,
-    });
+    })
+      .populate("studentId", "username profilePicture")
+      .populate("tutorId", "username profilePicture");
 
     if (!assignment) {
       return next(
@@ -440,38 +459,86 @@ const submitAssignment = async (req, res, next) => {
       );
     }
 
-    // Check if the assignment is past due date
+    res.status(200).json({
+      StatusCode: 200,
+      IsSuccess: true,
+      ErrorMessage: [],
+      Result: assignment,
+    });
+  } catch (error) {
+    console.error("Get Assignment By ID Error:", error);
+    next(createError(500, "Server error while fetching assignment"));
+  }
+};
+
+// Submit an assignment (student only)
+const submitAssignment = async (req, res, next) => {
+  try {
+    const userId = req.user?.sub;
+    const { assignmentId } = req.params;
+    const { remarks } = req.body;
+
+    // Find the assignment
+    const assignment = await Assignment.findOne({
+      _id: assignmentId,
+      studentId: userId,
+      isActive: true,
+    });
+
+    if (!assignment) {
+      return next(createError(404, "Assignment not found or access denied"));
+    }
+
+    // Check if the assignment is overdue
     const now = new Date();
     const isOverdue = now > new Date(assignment.dueDate);
 
-    // Process attachments - validate file types
+    // Process file uploads from req.files
     let processedAttachments = [];
-    if (attachments && Array.isArray(attachments)) {
-      processedAttachments = attachments.map((attachment) => {
+    if (req.files && req.files.files) {
+      for (const file of req.files.files) {
         // Validate file type
-        const fileExt = attachment.fileName.split(".").pop().toLowerCase();
+        const fileExt = file.originalname.split(".").pop().toLowerCase();
         const isImage = ["jpg", "jpeg", "png", "gif", "bmp"].includes(fileExt);
         const isPdf = fileExt === "pdf";
 
         if (!isImage && !isPdf) {
-          throw new Error("Only image and PDF files are allowed");
+          return next(createError(400, "Only image and PDF files are allowed"));
         }
 
-        return {
-          fileName: attachment.fileName,
-          fileUrl: attachment.fileUrl,
+        // Upload to Cloudinary
+        const filePath = getFilePath(file.filename);
+
+        const fileType = isImage ? "image" : "raw";
+        const folder = isImage
+          ? "TutorEase/AssignmentSubmissionsImages/"
+          : "TutorEase/AssignmentSubmissionsFiles/";
+
+        const fileUrl = await uploadToCloudinary(
+          filePath,
+          folder,
+          file.originalname,
+          fileType
+        );
+
+        // Add to processed attachments
+        processedAttachments.push({
+          fileName: file.originalname,
+          fileUrl: fileUrl,
           fileType: isImage ? "image" : "pdf",
           uploadedAt: new Date(),
-        };
-      });
+        });
+      }
     }
 
+    // Update assignment with submission details
     assignment.submission = {
-      content: content || "",
+      remarks: remarks || "",
       attachments: processedAttachments,
       submittedAt: now,
     };
 
+    // Update assignment status
     assignment.status = isOverdue ? "overdue" : "submitted";
 
     await assignment.save();
@@ -496,16 +563,11 @@ const provideFeedback = async (req, res, next) => {
   try {
     const userId = req.user?.sub;
     const { assignmentId } = req.params;
-    const { content, grade, attachments, feedbacknotes } = req.body;
-
-    if (!userId) {
-      return next(createError(401, "Unauthorized access"));
-    }
+    const { content, grade } = req.body;
 
     const assignment = await Assignment.findOne({
       _id: assignmentId,
       tutorId: userId,
-      isActive: true,
     });
 
     if (!assignment) {
@@ -515,7 +577,10 @@ const provideFeedback = async (req, res, next) => {
     }
 
     // Can only provide feedback if the assignment has been submitted
-    if (assignment.status !== "submitted" && assignment.status !== "overdue") {
+    if (
+      (assignment.status !== "completed") &
+      (assignment.status !== "reviewed")
+    ) {
       return next(
         createError(
           400,
@@ -527,11 +592,9 @@ const provideFeedback = async (req, res, next) => {
     assignment.feedback = {
       content,
       grade,
-      attachments: attachments || [],
       providedAt: new Date(),
     };
 
-    assignment.feedbacknotes = feedbacknotes;
     assignment.status = "reviewed";
 
     await assignment.save();
@@ -545,71 +608,6 @@ const provideFeedback = async (req, res, next) => {
   } catch (error) {
     console.error("Provide Feedback Error:", error);
     next(createError(500, "Server error while providing feedback"));
-  }
-};
-
-// Upload attachment to an assignment
-const uploadAttachment = async (req, res, next) => {
-  try {
-    const userId = req.user?.sub;
-    const { assignmentId } = req.params;
-    const { fileName, fileUrl } = req.body;
-
-    if (!userId) {
-      return next(createError(401, "Unauthorized access"));
-    }
-
-    const assignment = await Assignment.findOne({
-      _id: assignmentId,
-      $or: [{ studentId: userId }, { tutorId: userId }],
-      isActive: true,
-    });
-
-    if (!assignment) {
-      return next(
-        createError(404, "Assignment not found or you don't have permission")
-      );
-    }
-
-    // Validate file type
-    const fileExt = fileName.split(".").pop().toLowerCase();
-    const isImage = ["jpg", "jpeg", "png", "gif", "bmp"].includes(fileExt);
-    const isPdf = fileExt === "pdf";
-
-    if (!isImage && !isPdf) {
-      return next(createError(400, "Only image and PDF files are allowed"));
-    }
-
-    const newAttachment = {
-      fileName,
-      fileUrl,
-      fileType: isImage ? "image" : "pdf",
-      uploadedAt: new Date(),
-    };
-
-    // If tutor is uploading, add to assignment attachments
-    if (assignment.tutorId.toString() === userId) {
-      assignment.attachments.push(newAttachment);
-    }
-    // If student is uploading, add to submission attachments
-    else if (assignment.studentId.toString() === userId) {
-      if (!assignment.submission) {
-        assignment.submission = { content: "", attachments: [] };
-      }
-      assignment.submission.attachments.push(newAttachment);
-    }
-
-    await assignment.save();
-
-    res.status(200).json({
-      StatusCode: 200,
-      IsSuccess: true,
-      ErrorMessage: [],
-      Result: assignment,
-    });
-  } catch (error) {
-    console.error("Upload Attachment Error:", error);
-    next(createError(500, "Server error while uploading attachment"));
   }
 };
 
@@ -685,77 +683,6 @@ const deleteAttachment = async (req, res, next) => {
   }
 };
 
-// Change assignment status
-const updateStatus = async (req, res, next) => {
-  try {
-    const userId = req.user?.sub;
-    const { assignmentId } = req.params;
-    const { status } = req.body;
-
-    if (!userId) {
-      return next(createError(401, "Unauthorized access"));
-    }
-
-    const assignment = await Assignment.findOne({
-      _id: assignmentId,
-      $or: [{ studentId: userId }, { tutorId: userId }],
-      isActive: true,
-    });
-
-    if (!assignment) {
-      return next(
-        createError(404, "Assignment not found or you don't have permission")
-      );
-    }
-
-    // Validate status transitions
-    const validStatuses = [
-      "assigned",
-      "inProgress",
-      "submitted",
-      "reviewed",
-      "completed",
-      "overdue",
-    ];
-    if (!validStatuses.includes(status)) {
-      return next(createError(400, "Invalid status"));
-    }
-
-    // Only tutors can mark as completed or reviewed
-    if (
-      (status === "completed" || status === "reviewed") &&
-      assignment.tutorId.toString() !== userId
-    ) {
-      return next(
-        createError(
-          403,
-          "Only tutors can mark assignments as completed or reviewed"
-        )
-      );
-    }
-
-    // Only students can mark as in progress
-    if (status === "inProgress" && assignment.studentId.toString() !== userId) {
-      return next(
-        createError(403, "Only students can mark assignments as in progress")
-      );
-    }
-
-    assignment.status = status;
-    await assignment.save();
-
-    res.status(200).json({
-      StatusCode: 200,
-      IsSuccess: true,
-      ErrorMessage: [],
-      Result: assignment,
-    });
-  } catch (error) {
-    console.error("Update Status Error:", error);
-    next(createError(500, "Server error while updating status"));
-  }
-};
-
 // Delete an assignment (tutor only)
 const deleteAssignment = async (req, res, next) => {
   try {
@@ -795,15 +722,15 @@ const deleteAssignment = async (req, res, next) => {
 
 module.exports = {
   createAssignment,
-  getStudentAssignments,
+  // getStudentAssignments,
   getTutorAssignments,
   getBookingAssignments,
   getAssignmentById,
   updateAssignment,
   submitAssignment,
   provideFeedback,
-  uploadAttachment,
+  getOpenAssignments,
+  getClosedAssignments,
   deleteAttachment,
-  updateStatus,
   deleteAssignment,
 };

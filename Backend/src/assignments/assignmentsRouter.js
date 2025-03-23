@@ -15,15 +15,33 @@ const assignmentController = require("./assignmentsController");
 assignmentRouter.post(
   "/createAssignments",
   authenticateToken,
+  isTutor,
   upload.fields([{ name: "files", maxCount: 3 }]),
   assignmentController.createAssignment
 );
 
-// Get all assignments for a student
+// // Get all assignments for a student
+// assignmentRouter.get(
+//   "/getStudentAssignments/",
+//   authenticateToken,
+//   isUser,
+//   assignmentController.getStudentAssignments
+// );
+
+// Get all assignments for a Opne student of a specific tutor
 assignmentRouter.get(
-  "/getStudentAssignments/",
+  "/getOpenAssignments/:tutorID",
   authenticateToken,
-  assignmentController.getStudentAssignments
+  isUser,
+  assignmentController.getOpenAssignments
+);
+
+// Get all assignments for a Closed student of a specific tutor
+assignmentRouter.get(
+  "/getClosedAssignments/:tutorID",
+  authenticateToken,
+  isUser,
+  assignmentController.getClosedAssignments
 );
 
 // Get all assignments created by a tutor
@@ -56,10 +74,10 @@ assignmentRouter.put(
 );
 
 // Submit an assignment (student only)
-// the Student can also upload image or pdf while submitting, 1 also or both also
 assignmentRouter.post(
   "/submitAssignment/:assignmentId",
   authenticateToken,
+  upload.fields([{ name: "files", maxCount: 3 }]),
   assignmentController.submitAssignment
 );
 
@@ -67,28 +85,15 @@ assignmentRouter.post(
 assignmentRouter.post(
   "/feedback/:assignmentId",
   authenticateToken,
+  isTutor,
   assignmentController.provideFeedback
 );
 
-// Upload attachment to an assignment
-assignmentRouter.post(
-  "/uploadAssignmentsattachment/:assignmentId",
-  authenticateToken,
-  assignmentController.uploadAttachment
-);
-
-// Delete an attachment
+// Delete an attachment both Student and tutor
 assignmentRouter.delete(
   "/deleteAssignmentsAttachments/:assignmentId/:attachmentId",
   authenticateToken,
   assignmentController.deleteAttachment
-);
-
-// Change assignment status
-assignmentRouter.patch(
-  "/changeStatusAssignments/:assignmentId",
-  authenticateToken,
-  assignmentController.updateStatus
 );
 
 // Delete an assignment (tutor only)
