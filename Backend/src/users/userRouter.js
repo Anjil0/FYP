@@ -17,9 +17,11 @@ const {
   forgotPassword,
   verifyResetLink,
   updateUserDetails,
+  getAdminDashboard,
 } = require("./userController");
 
 const upload = require("../middlewares/multerConfig");
+const { previewReport, downloadReport } = require("../utils/reportGeneration");
 
 const userRouter = express.Router();
 
@@ -41,8 +43,29 @@ userRouter.post("/resetPassword", resetPassword);
 
 userRouter.post("/resendCode", resendVerificationCode);
 
-userRouter.put("/updateUser", authenticateToken, isUser, updateUserDetails);
+userRouter.put(
+  "/updateUser",
+  upload.single("image"),
+  authenticateToken,
+  isUser,
+  updateUserDetails
+);
 
 userRouter.post("/toggleRole/:id", authenticateToken, toggleRole);
 
+userRouter.get(
+  "/getAdminDashboard/",
+  authenticateToken,
+  isAdmin,
+  getAdminDashboard
+);
+
+userRouter.get("/reports/preview/", authenticateToken, isAdmin, previewReport);
+
+userRouter.get(
+  "/reports/download/",
+  authenticateToken,
+  isAdmin,
+  downloadReport
+);
 module.exports = userRouter;

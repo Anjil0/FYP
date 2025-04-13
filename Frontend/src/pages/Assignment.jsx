@@ -101,23 +101,26 @@ const AssignmentsDashboard = () => {
         class: "text-red-600 font-medium",
       };
     }
-    const today = new Date();
-    const due = new Date(dueDate);
-    const diffTime = due - today;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    console.log(dueDate);
 
-    if (diffDays < 0) {
-      return { text: "Overdue", class: "text-red-600 font-medium" };
-    } else if (diffDays === 0) {
-      return { text: "Due today", class: "text-orange-600 font-medium" };
-    } else if (diffDays === 1) {
-      return { text: "Due tomorrow", class: "text-orange-600 font-medium" };
-    } else {
-      return {
-        text: `${diffDays} days left`,
-        class: "text-indigo-600 font-medium",
-      };
-    }
+    return {
+      text: `(Due on ${formatDate(dueDate)})`,
+      class: "text-red-600 font-medium",
+    };
+  };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+
+    return date
+      .toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      })
+      .replace(",", " at");
   };
 
   const navigateToCreate = () => {

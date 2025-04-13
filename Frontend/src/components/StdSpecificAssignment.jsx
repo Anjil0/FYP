@@ -98,6 +98,8 @@ const StdSpecificAssignment = () => {
         return "bg-red-100 text-red-800";
       case "unsubmitted":
         return "bg-gray-100 text-gray-800";
+      case "reviewed":
+        return "bg-green-100 text-green-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -169,7 +171,7 @@ const StdSpecificAssignment = () => {
     );
   }
 
-  // Subject is a placeholder - you'll need to replace this with the actual subject from your data
+  // Get subject from assignment data
   const subject = assignment.subject || "Mathematics";
 
   return (
@@ -358,22 +360,59 @@ const StdSpecificAssignment = () => {
           <div className="space-y-4">
             <div className="flex justify-between border-b pb-3">
               <span className="text-gray-600 font-medium">Grade</span>
-              <span className="text-gray-700">n/a</span>
+              <span className="text-gray-700 font-semibold">
+                {assignment.feedback && assignment.feedback.grade
+                  ? assignment.feedback.grade
+                  : "n/a"}
+              </span>
             </div>
 
             <div className="flex justify-between border-b pb-3">
-              <span className="text-gray-600 font-medium">Remarks</span>
+              <span className="text-gray-600 font-medium">Feedback</span>
               <span className="text-gray-700">
-                No remarks provided by the teacher yet!
+                {assignment.feedback && assignment.feedback.content
+                  ? assignment.feedback.content
+                  : "No feedback provided by the teacher yet!"}
               </span>
             </div>
 
             <div className="flex justify-between border-b pb-3">
-              <span className="text-gray-600 font-medium">
-                Attachments/Links
+              <span className="text-gray-600 font-medium">Provided On</span>
+              <span className="text-gray-700">
+                {assignment.feedback && assignment.feedback.providedAt
+                  ? formatDate(assignment.feedback.providedAt)
+                  : "n/a"}
               </span>
-              <span className="text-gray-700">n/a</span>
             </div>
+
+            {assignment.feedback &&
+              assignment.feedback.attachments &&
+              assignment.feedback.attachments.length > 0 && (
+                <div className="mt-4">
+                  <h4 className="text-gray-600 font-medium mb-3">
+                    Feedback Files:
+                  </h4>
+                  <ul className="space-y-2">
+                    {assignment.feedback.attachments.map((file, index) => (
+                      <li
+                        key={index}
+                        className="border border-gray-100 rounded-md"
+                      >
+                        <button
+                          onClick={() => openFile(file.fileUrl)}
+                          className="flex items-center w-full px-4 py-3 text-left hover:bg-gray-50 rounded-md transition"
+                        >
+                          {getFileIcon(file.fileType)}
+                          <span className="text-blue-600 hover:underline flex-1">
+                            {file.fileName}
+                          </span>
+                          <Download className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
           </div>
         </div>
       </div>

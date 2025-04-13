@@ -2,7 +2,12 @@ const createError = require("http-errors");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const tutorModel = require("./tutorModel");
-const { uploadToCloudinary, getFilePath } = require("../utils/fileUpload");
+const cloudinary = require("../config/coludinary");
+const {
+  uploadToCloudinary,
+  getFilePath,
+  extractPublicId,
+} = require("../utils/fileUpload");
 const {
   sendVerificationMail,
   sendTutorVerificationReject,
@@ -134,10 +139,49 @@ const getAllTutors = async (req, res, next) => {
 
 const getVerifiedTutors = async (req, res, next) => {
   try {
-    const tutors = await tutorModel
-      .find({ isEmailVerified: "true", isVerified: "verified" })
-      .select("-password");
-    if (!tutors) {
+    // Step 2: Continue aggregation
+    const tutors = await tutorModel.aggregate([
+      {
+        $match: {
+          isEmailVerified: true,
+          isVerified: "verified",
+        },
+      },
+      {
+        $lookup: {
+          from: "ratings",
+          localField: "_id",
+          foreignField: "tutorId",
+          as: "ratings",
+        },
+      },
+      {
+        $addFields: {
+          averageRating: {
+            $ifNull: [
+              {
+                $avg: {
+                  $map: {
+                    input: "$ratings",
+                    as: "rating",
+                    in: "$$rating.rating",
+                  },
+                },
+              },
+              0, // Default rating if no ratings exist
+            ],
+          },
+        },
+      },
+      {
+        $project: {
+          password: 0,
+          ratings: 0,
+        },
+      },
+    ]);
+
+    if (!tutors || tutors.length === 0) {
       return next(createError(400, "No tutors found."));
     }
 
@@ -152,6 +196,28 @@ const getVerifiedTutors = async (req, res, next) => {
   } catch (error) {
     console.error("Get Verified Tutors Error:", error);
     next(createError(500, "Server Error while fetching verified tutors."));
+  }
+};
+
+const getTutorProfile = async (req, res, next) => {
+  const id = req.user.sub;
+  try {
+    const tutor = await tutorModel.findById(id).select("-password");
+    if (!tutor) {
+      return next(createError(404, "Tutor not found."));
+    }
+
+    res.status(200).json({
+      StatusCode: 200,
+      IsSuccess: true,
+      ErrorMessage: [],
+      Result: {
+        tutor,
+      },
+    });
+  } catch (error) {
+    console.error("Get Tutor Details Error:", error);
+    next(createError(500, "Server Error while fetching tutor details."));
   }
 };
 
@@ -319,6 +385,123 @@ const getAllUsers = async (req, res, next) => {
   }
 };
 
+const updateTutorProfile = async (req, res, next) => {
+  const tutorId = req.user.sub;
+  const {
+    username,
+    grade,
+    phoneNumber,
+    address,
+    teachingExperience,
+    education,
+    description,
+    age,
+    gender,
+  } = req.body;
+
+  // Basic validation
+  if (!username || !grade || !phoneNumber || !address) {
+    return next(
+      createError(
+        400,
+        "Username, grade, phone number, and address are required"
+      )
+    );
+  }
+
+  // Validate username format
+  if (!usernameRegex.test(username)) {
+    return next(
+      createError(
+        400,
+        "Username must be alphanumeric and between 3 to 20 characters long."
+      )
+    );
+  }
+
+  // Validate phone number format
+  if (!phoneRegex.test(phoneNumber)) {
+    return next(
+      createError(400, "Invalid phone number format. Must be 10 digits.")
+    );
+  }
+
+  try {
+    // Find tutor in database
+    const tutor = await tutorModel.findById(tutorId);
+    if (!tutor) {
+      return next(createError(404, "Tutor not found"));
+    }
+
+    // Handle image upload if file was provided
+    if (req.file) {
+      // Delete previous image from Cloudinary if exists
+      if (tutor.image) {
+        const publicId = extractPublicId(
+          tutor.image,
+          "TutorEase/ProfileImages"
+        );
+        if (publicId) {
+          await cloudinary.uploader.destroy(publicId);
+        }
+      }
+
+      // Upload new image to Cloudinary
+      const imagePath = getFilePath(req.file.filename);
+      const imageMimeType = req.file.mimetype.split("/").pop();
+      const imageUrl = await uploadToCloudinary(
+        imagePath,
+        "TutorEase/ProfileImages",
+        req.file.filename,
+        imageMimeType
+      );
+
+      tutor.image = imageUrl;
+    }
+
+    // Update tutor fields
+    tutor.username = username;
+    tutor.grade = grade;
+    tutor.phoneNumber = phoneNumber;
+    tutor.address = address;
+    tutor.description = description || tutor.description;
+    tutor.education = education || tutor.education;
+    tutor.teachingExperience = teachingExperience || tutor.teachingExperience;
+
+    if (age) tutor.age = age;
+    if (gender) tutor.gender = gender;
+
+    await tutor.save();
+
+    // exclude password from tutor
+    const tutorResponse = tutor.toObject();
+    delete tutorResponse.password;
+
+    // Return success response
+    return res.status(200).json({
+      StatusCode: 200,
+      IsSuccess: true,
+      ErrorMessage: [],
+      Result: {
+        message: "Tutor profile updated successfully",
+        tutor: tutorResponse,
+      },
+    });
+  } catch (error) {
+    next(
+      createError(
+        500,
+        `Server error while updating tutor profile. ${error.message}`
+      )
+    );
+  }
+};
+
+// Phone number regex for validation
+const phoneRegex = /^\d{10}$/;
+// Username regex for validation
+const usernameRegex = /^[a-zA-Z0-9 ]{3,20}$/;
+
 module.exports = {
   signupTutor,
   verifyTutor,
@@ -326,6 +509,8 @@ module.exports = {
   toogleAvailability,
   getVerifiedTutors,
   getTutorDetails,
+  updateTutorProfile,
+  getTutorProfile,
   getAllUsers,
   getTutorDashboard,
 };

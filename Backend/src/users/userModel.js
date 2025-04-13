@@ -27,6 +27,7 @@ const userModelSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    preferredSubjects: [{ type: String }],
     image: {
       type: String,
     },

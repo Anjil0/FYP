@@ -40,6 +40,10 @@ import AssignmentDetailPage from "./components/SpecifiAssignment.jsx";
 import EditAssignment from "./components/EditAssignment.jsx";
 import StudentAssignmentPage from "./components/StudentAsignment.jsx";
 import StdSpecificAssignment from "./components/StdSpecificAssignment.jsx";
+import AnnouncementPage from "./pages/AdminAnnouncementPage.jsx";
+import ReportGeneration from "./pages/ReportGeneration.jsx";
+import RecommendedTutors from "./pages/RecommendedTutors.jsx";
+import TutorProfile from "./pages/TutorProfile.jsx";
 
 const App = () => {
   const registerSocket = () => {
@@ -144,7 +148,14 @@ const App = () => {
               </ProtectedRoute>
             }
           />
-
+          <Route
+            path="/recommendation"
+            element={
+              <ProtectedRoute allowedRoles={["user"]}>
+                <RecommendedTutors />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/Stdprofile"
             element={
@@ -206,6 +217,14 @@ const App = () => {
             element={
               <ProtectedRoute allowedRoles={["user"]}>
                 <StdSpecificAssignment />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/tutorProfile"
+            element={
+              <ProtectedRoute allowedRoles={["tutor"]}>
+                <TutorProfile />
               </ProtectedRoute>
             }
           />
@@ -283,6 +302,14 @@ const App = () => {
           }
         />
         <Route
+          path="/admin/generateReport"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <ReportGeneration />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/adminUsers"
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
@@ -295,6 +322,14 @@ const App = () => {
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
               <TutorVerification />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/announcements"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <AnnouncementPage />
             </ProtectedRoute>
           }
         />

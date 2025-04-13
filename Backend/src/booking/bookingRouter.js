@@ -9,6 +9,8 @@ const {
   getStudentBookings,
   getAllTutors,
   getTutorBookings,
+  getAllTutorinChat,
+  getAllStudentinChat,
   cancelBooking,
 } = require("./bookingController");
 
@@ -59,6 +61,13 @@ bookingRouter.get(
   getStudentChatBookings
 );
 
+bookingRouter.get(
+  "/getAllTutorinChat",
+  authenticateToken,
+  isUser,
+  getAllTutorinChat
+);
+
 // Get bookings for tutor
 bookingRouter.get(
   "/tutorBookings",
@@ -72,6 +81,12 @@ bookingRouter.get(
   authenticateToken,
   isTutor,
   getTutorChatBookings
+);
+bookingRouter.get(
+  "/getAllStudentinChat",
+  authenticateToken,
+  isTutor,
+  getAllStudentinChat
 );
 
 module.exports = bookingRouter;

@@ -14,12 +14,11 @@ const notificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["booking", "message", "payment", "other"],
+      enum: ["booking", "message", "payment", "other", "rating"],
       required: true,
     },
     typeId: {
       type: mongoose.Schema.Types.ObjectId,
-      required: true,
     },
     message: {
       type: String,

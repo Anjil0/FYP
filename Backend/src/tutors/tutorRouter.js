@@ -11,7 +11,9 @@ const {
   getAllTutors,
   getVerifiedTutors,
   getAllUsers,
+  getTutorProfile,
   getTutorDetails,
+  updateTutorProfile,
   toogleAvailability,
   getTutorDashboard,
 } = require("./tutorController");
@@ -29,9 +31,19 @@ tutorRouter.post(
   signupTutor
 );
 
+tutorRouter.put(
+  "/updateTutor",
+  upload.single("image"),
+  authenticateToken,
+  isTutor,
+  updateTutorProfile
+);
+
 tutorRouter.get("/getAllTutors", getAllTutors);
 
 tutorRouter.get("/getVerifiedTutors", getVerifiedTutors);
+
+tutorRouter.get("/getTutorProfile/", authenticateToken, getTutorProfile);
 
 tutorRouter.get("/getTutorDetails/:id", getTutorDetails);
 

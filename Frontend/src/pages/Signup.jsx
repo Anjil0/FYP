@@ -14,14 +14,18 @@ import {
   Upload,
   Eye,
   EyeOff,
+  BookOpen,
+  X,
+  Plus,
 } from "lucide-react";
 import baseUrl from "../config/config.js";
 
 const SignupPage = () => {
-    const { setLoading } = useLoading();
+  const { setLoading } = useLoading();
   const navigate = useNavigate();
   const [imagePreview, setImagePreview] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [subjectInput, setSubjectInput] = useState("");
   const [formData, setFormData] = useState({
     username: "",
     email: "",
@@ -29,8 +33,20 @@ const SignupPage = () => {
     grade: "",
     phoneNumber: "",
     address: "",
+    preferredSubjects: [],
     image: null,
   });
+
+  // Common subjects for quick selection
+  const commonSubjects = [
+    "Mathematics", 
+    "Physics", 
+    "Chemistry", 
+    "Biology", 
+    "English", 
+    "History", 
+    "Computer Science"
+  ];
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -50,16 +66,55 @@ const SignupPage = () => {
     }
   };
 
+  const handleSubjectInputChange = (e) => {
+    setSubjectInput(e.target.value);
+  };
+
+  const addSubject = (subject = subjectInput) => {
+    if (subject && !formData.preferredSubjects.includes(subject)) {
+      setFormData({
+        ...formData,
+        preferredSubjects: [...formData.preferredSubjects, subject],
+      });
+      setSubjectInput("");
+    }
+  };
+
+  const removeSubject = (subjectToRemove) => {
+    setFormData({
+      ...formData,
+      preferredSubjects: formData.preferredSubjects.filter(
+        (subject) => subject !== subjectToRemove
+      ),
+    });
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && subjectInput.trim()) {
+      e.preventDefault();
+      addSubject();
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const formDataToSend = new FormData();
+    
+    // Append all form fields including the preferredSubjects array
     Object.keys(formData).forEach((key) => {
-      formDataToSend.append(key, formData[key]);
+      if (key === "preferredSubjects") {
+        // Handle array by appending each subject with the same key name
+        formData[key].forEach((subject) => {
+          formDataToSend.append("preferredSubjects", subject);
+        });
+      } else {
+        formDataToSend.append(key, formData[key]);
+      }
     });
 
     try {
       setLoading(true);
-      await new Promise((resolve) => setTimeout(resolve, 1000)); 
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       const response = await axios.post(
         `${baseUrl}/api/users/register`,
         formDataToSend,
@@ -75,12 +130,12 @@ const SignupPage = () => {
       }
     } catch (error) {
       if (error.response && error.response.data) {
-        const errorMessages = error.response.data.ErrorMessage[0].message
+        const errorMessages = error.response.data.ErrorMessage[0].message;
         toast.error(`${errorMessages}`);
       } else {
         toast.error("An unexpected error occurred.");
       }
-    }finally {
+    } finally {
       setLoading(false);
     }
   };
@@ -119,7 +174,7 @@ const SignupPage = () => {
         </div>
 
         {/* Right Section - Form */}
-        <div className="w-full lg:w-[60%] p-8 lg:p-5">
+        <div className="w-full lg:w-[60%] p-8 lg:p-5 overflow-y-auto">
           <div className="space-y-3">
             <div className="space-y-1">
               <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent inline-flex items-center">
@@ -167,7 +222,7 @@ const SignupPage = () => {
               </div>
 
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Username
@@ -203,7 +258,7 @@ const SignupPage = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Password
@@ -232,68 +287,125 @@ const SignupPage = () => {
                     </div>
                   </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Phone
-                      </label>
-                      <div className="relative">
-                        <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                        <input
-                          type="tel"
-                          name="phoneNumber"
-                          placeholder="Enter phone"
-                          onChange={handleInputChange}
-                          className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none hover:border-blue-300"
-                          required
-                        />
-                      </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Phone
+                    </label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                      <input
+                        type="tel"
+                        name="phoneNumber"
+                        placeholder="Enter phone"
+                        onChange={handleInputChange}
+                        className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none hover:border-blue-300"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Grade Level
+                    </label>
+                    <div className="relative">
+                      <GraduationCap className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                      <select
+                        name="grade"
+                        onChange={handleInputChange}
+                        className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none appearance-none bg-white"
+                        required
+                      >
+                        <option value="">Select Grade</option>
+                        {[...Array(10)].map((_, i) => (
+                          <option key={i + 1} value={`Class ${i + 1}`}>
+                            Class {i + 1}
+                          </option>
+                        ))}
+                        <option value="Higher Secondary">
+                          Higher Secondary
+                        </option>
+                        <option value="Bachelors">Bachelors</option>
+                        <option value="Masters">Masters</option>
+                      </select>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Grade Level
-                      </label>
-                      <div className="relative">
-                        <GraduationCap className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                        <select
-                          name="grade"
-                          onChange={handleInputChange}
-                          className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none appearance-none bg-white"
-                          required
-                        >
-                          <option value="">Select Grade</option>
-                          {[...Array(10)].map((_, i) => (
-                            <option key={i + 1} value={`Class ${i + 1}`}>
-                              Class {i + 1}
-                            </option>
-                          ))}
-                          <option value="Higher Secondary">
-                            Higher Secondary
-                          </option>
-                          <option value="Bachelors">Bachelors</option>
-                          <option value="Masters">Masters</option>
-                        </select>
-                      </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Address
+                    </label>
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                      <input
+                        type="text"
+                        name="address"
+                        placeholder="Enter address"
+                        onChange={handleInputChange}
+                        className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none hover:border-blue-300"
+                        required
+                      />
                     </div>
+                  </div>
+                </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Address
-                      </label>
-                      <div className="relative">
-                        <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                        <input
-                          type="text"
-                          name="address"
-                          placeholder="Enter address"
-                          onChange={handleInputChange}
-                          className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none hover:border-blue-300"
-                          required
-                        />
+                {/* Preferred Subjects Section */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Preferred Subjects
+                  </label>
+                  <div className="relative mb-2">
+                    <BookOpen className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                    <input
+                      type="text"
+                      placeholder="Add a subject you're interested in"
+                      value={subjectInput}
+                      onChange={handleSubjectInputChange}
+                      onKeyDown={handleKeyDown}
+                      className="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none hover:border-blue-300"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => addSubject()}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-blue-500 hover:text-blue-700 focus:outline-none"
+                    >
+                      <Plus className="h-5 w-5" />
+                    </button>
+                  </div>
+
+                  {/* Quick select subjects */}
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {commonSubjects.map((subject) => (
+                      <button
+                        key={subject}
+                        type="button"
+                        onClick={() => addSubject(subject)}
+                        className="px-3 py-1 text-xs bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 transition-colors"
+                      >
+                        {subject}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Display selected subjects */}
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {formData.preferredSubjects.map((subject, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center bg-blue-100 text-blue-700 px-3 py-1 rounded-full"
+                      >
+                        <span className="text-sm">{subject}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeSubject(subject)}
+                          className="ml-2 text-blue-600 hover:text-blue-800 focus:outline-none"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
                       </div>
-                    </div>
+                    ))}
                   </div>
                 </div>
 
@@ -303,8 +415,8 @@ const SignupPage = () => {
                 >
                   Create Account
                 </button>
-              </form>
-           
+              </div>
+            </form>
 
             <p className="text-center text-sm text-gray-600">
               Already have an account?{" "}

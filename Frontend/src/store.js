@@ -106,23 +106,73 @@ export const useProfileStore = create((set, get) => ({
     const { editedUser } = get();
     const token = localStorage.getItem("accessToken");
     setLoading(true);
+
+    // Validate required fields
+    if (
+      !editedUser.username ||
+      !editedUser.grade ||
+      !editedUser.phoneNumber ||
+      !editedUser.address
+    ) {
+      toast.error("All required fields must be filled");
+      setLoading(false);
+      return;
+    }
+
+    // Validate preferred subjects
+    if (
+      !Array.isArray(editedUser.preferredSubjects) ||
+      editedUser.preferredSubjects.length < 1
+    ) {
+      toast.error("At least one preferred subject is required");
+      setLoading(false);
+      return;
+    }
+
     try {
+      let formData = new FormData();
+      let isImageUpdated = false;
+
+      // Add user details to formData
+      formData.append("username", editedUser.username);
+      formData.append("grade", editedUser.grade);
+      formData.append("phoneNumber", editedUser.phoneNumber);
+      formData.append("address", editedUser.address);
+
+      // Add preferred subjects to formData
+      editedUser.preferredSubjects.forEach((subject, index) => {
+        formData.append(`preferredSubjects[${index}]`, subject);
+      });
+
+      // Check if there is a new image
+      if (editedUser.image && editedUser.image.startsWith("data:")) {
+        const base64Response = await fetch(editedUser.image);
+        const blob = await base64Response.blob();
+        const file = new File([blob], "profile-image.jpg", { type: blob.type });
+
+        // Change the field name to "image" to match the backend
+        formData.append("image", file);
+        isImageUpdated = true;
+      }
+
+      // Send the form data to the API
       const response = await axios.put(
-        `${baseUrl}/api/users/updateUser`,
-        editedUser,
+        `${baseUrl}/api/users/updateUser`, // API endpoint
+        formData,
         {
           headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
           },
         }
       );
+
+      // Handle the response
       if (response.data && response.data.Result) {
         set({ user: response.data.Result.userData, isEditing: false });
         toast.success("Profile updated successfully!");
       } else {
         toast.error(
-          response.data.ErrorMessage.message || "Something went wrong"
+          response.data?.ErrorMessage?.message || "Something went wrong"
         );
       }
     } catch (err) {
@@ -133,10 +183,10 @@ export const useProfileStore = create((set, get) => ({
       if (err.response) {
         errorMessage =
           err.response.data?.ErrorMessage?.[0]?.message ||
+          err.response.data?.ErrorMessage?.message ||
           err.response.data?.message ||
           `Request failed with status code ${err.response.status}`;
       } else if (err.request) {
-        // Request was made but no response received
         errorMessage = "No response from server. Please try again later.";
       } else {
         errorMessage = err.message;
@@ -147,13 +197,20 @@ export const useProfileStore = create((set, get) => ({
       setLoading(false);
     }
   },
-
   setEditedUser: (field, value) =>
     set((state) => ({
       editedUser: { ...state.editedUser, [field]: value },
     })),
 
   toggleEditing: () => {
-    set({ isEditing: !get().isEditing });
+    const { isEditing, user } = get();
+    if (!isEditing) {
+      set({
+        isEditing: true,
+        editedUser: { ...user },
+      });
+    } else {
+      set({ isEditing: false });
+    }
   },
 }));

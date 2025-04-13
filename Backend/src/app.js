@@ -15,6 +15,10 @@ const messageRouter = require("./message/messageRouter");
 const notificationRouter = require("./notification/notificationRouter");
 const sessionRouter = require("./session/sessionRouter");
 const assignmentRouter = require("./assignments/assignmentsRouter");
+const ratingRouter = require("./ratings/ratingRouter");
+const recommendationRouter = require("./recommendation/recommendationRouter");
+const userDashboardRouter = require("./userDashboard/userDashboardRouter");
+const tutorDashboardRouter = require("./tutorDashboard/tutorDashboardRouter");
 
 const corsOptions = {
   // origin: "http://192.168.18.3:5173",
@@ -43,6 +47,10 @@ app.use("/api/messages", messageRouter);
 app.use("/api/notifications", notificationRouter);
 app.use("/api/sessions", sessionRouter);
 app.use("/api/assignments", assignmentRouter);
+app.use("/api/ratings", ratingRouter);
+app.use("/api/recommendations", recommendationRouter);
+app.use("/api/dashboard", userDashboardRouter);
+app.use("/api/Tdashboard", tutorDashboardRouter);
 
 app.use(globalErrorHandler);
 

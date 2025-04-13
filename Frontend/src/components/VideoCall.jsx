@@ -17,7 +17,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 const VideoCall = () => {
   const location = useLocation();
   const { roomId, yourName, anotherPersonName } = location.state || {};
-  const roomIdFromUrl = 11;
+  const roomIdFromUrl = roomId;
   const token = localStorage.getItem("accessToken");
   const userId = token ? JSON.parse(atob(token.split(".")[1])).sub : null;
   const navigate = useNavigate();
@@ -42,7 +42,7 @@ const VideoCall = () => {
 
   useEffect(() => {
     if (roomId) {
-      console.log("room id from useeffect",roomId)
+      console.log("room id from useeffect", roomId);
       joinRoom();
     }
   }, [roomId]);
@@ -50,7 +50,7 @@ const VideoCall = () => {
   // Effect to handle socket connection state
   useEffect(() => {
     const onConnect = () => {
-      console.log("room id from connection",roomId)
+      console.log("room id from connection", roomId);
       if (roomRef.current && localStream) {
         socket.emit("join-room", roomRef.current, userId);
       }

@@ -413,6 +413,76 @@ const getStudentChatBookings = async (req, res, next) => {
   }
 };
 
+const getAllTutorinChat = async (req, res, next) => {
+  const studentId = req.user.sub;
+
+  try {
+    const bookings = await bookingModel
+      .find({ studentId, status: { $ne: "cancelled" } })
+      .populate({
+        path: "tutorId",
+        model: "Tutor",
+        select: "username email image teachingLocation",
+      })
+      .populate({
+        path: "timeSlotId",
+        model: "TimeSlot",
+        select: "subjectName gradeLevel daysOfWeek timeSlots",
+      })
+      .sort({ createdAt: 1 });
+
+    if (!bookings.length) {
+      return next(createError(400, "No bookings found"));
+    }
+
+    // Group bookings by tutorId
+    const groupedBookings = bookings.reduce((acc, booking) => {
+      const tutorId = booking.tutorId._id.toString();
+      if (!acc[tutorId]) {
+        acc[tutorId] = [];
+      }
+      acc[tutorId].push(booking);
+      return acc;
+    }, {});
+
+    // Get the first booking for each tutor (if there are multiple bookings)
+    const modifiedBookings = Object.values(groupedBookings).map(
+      (bookingsForTutor) => {
+        const firstBooking = bookingsForTutor[0];
+        const specificTimeSlot = firstBooking.timeSlotId?.timeSlots?.find(
+          (slot) =>
+            slot._id.toString() === firstBooking.specificTimeSlotId.toString()
+        );
+
+        return {
+          ...firstBooking.toObject(),
+          timeSlot: {
+            startTime: specificTimeSlot?.startTime,
+            endTime: specificTimeSlot?.endTime,
+            days: firstBooking.timeSlotId?.daysOfWeek || [],
+          },
+          timeSlotId: {
+            ...firstBooking.timeSlotId.toObject(),
+            timeSlots: undefined,
+          },
+        };
+      }
+    );
+
+    res.status(200).json({
+      StatusCode: 200,
+      IsSuccess: true,
+      ErrorMessage: [],
+      Result: {
+        bookings: modifiedBookings,
+      },
+    });
+  } catch (error) {
+    console.error("Get Student Bookings Error:", error);
+    return next(createError(500, "Server Error while fetching bookings"));
+  }
+};
+
 const getAllTutors = async (req, res, next) => {
   try {
     const studentId = req.user.sub;
@@ -575,6 +645,83 @@ const getTutorChatBookings = async (req, res, next) => {
   }
 };
 
+const getAllStudentinChat = async (req, res, next) => {
+  const tutorId = req.user.sub;
+
+  try {
+    const bookings = await bookingModel
+      .find({ tutorId, status: { $ne: "cancelled" } })
+      .populate({
+        path: "studentId",
+        model: "User",
+        select: "username image email grade",
+      })
+      .populate({
+        path: "timeSlotId",
+        model: "TimeSlot",
+        select: "subjectName gradeLevel daysOfWeek timeSlots",
+      })
+      .sort({ createdAt: 1 });
+
+    if (!bookings.length) {
+      return res.status(200).json({
+        StatusCode: 200,
+        IsSuccess: true,
+        ErrorMessage: [],
+        Result: {
+          bookings: [],
+        },
+      });
+    }
+
+    // Group bookings by studentId
+    const groupedBookings = bookings.reduce((acc, booking) => {
+      const studentId = booking.studentId._id.toString();
+      if (!acc[studentId]) {
+        acc[studentId] = [];
+      }
+      acc[studentId].push(booking);
+      return acc;
+    }, {});
+
+    // Get the first booking for each student (if there are multiple bookings)
+    const modifiedBookings = Object.values(groupedBookings).map(
+      (bookingsForStudent) => {
+        const firstBooking = bookingsForStudent[0];
+        const specificTimeSlot = firstBooking.timeSlotId?.timeSlots?.find(
+          (slot) =>
+            slot._id.toString() === firstBooking.specificTimeSlotId.toString()
+        );
+
+        return {
+          ...firstBooking.toObject(),
+          timeSlot: {
+            startTime: specificTimeSlot?.startTime,
+            endTime: specificTimeSlot?.endTime,
+            days: firstBooking.timeSlotId?.daysOfWeek || [],
+          },
+          timeSlotId: {
+            ...firstBooking.timeSlotId.toObject(),
+            timeSlots: undefined,
+          },
+        };
+      }
+    );
+
+    res.status(200).json({
+      StatusCode: 200,
+      IsSuccess: true,
+      ErrorMessage: [],
+      Result: {
+        bookings: modifiedBookings,
+      },
+    });
+  } catch (error) {
+    console.error("Get Tutor Bookings Error:", error);
+    next(createError(500, "Server Error while fetching bookings"));
+  }
+};
+
 module.exports = {
   createBooking,
   tutorConfirmBooking,
@@ -585,4 +732,6 @@ module.exports = {
   getTutorChatBookings,
   getTutorBookings,
   getAllTutors,
+  getAllTutorinChat,
+  getAllStudentinChat,
 };

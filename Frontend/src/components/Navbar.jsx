@@ -9,6 +9,48 @@ import { useLocation } from "react-router-dom";
 import socket from "../socket";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { motion, AnimatePresence } from "framer-motion";
+
+const EnhancedAnnouncement = ({ announcement, setAnnouncement }) => {
+  if (!announcement) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0, y: -50, scale: 0.9 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: -20, scale: 0.9 }}
+        className="fixed top-20 right-4 z-50 max-w-sm overflow-hidden rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 shadow-xl shadow-blue-500/20"
+      >
+        <div className="flex items-start p-4">
+          <div className="flex-shrink-0 p-2 bg-white/20 rounded-full mr-3">
+            <Bell className="h-5 w-5 text-white" />
+          </div>
+          <div className="flex-1 pt-0.5">
+            <h4 className="text-white font-bold text-base mb-1">
+              {announcement.title}
+            </h4>
+            <p className="text-blue-50 text-sm">{announcement.content}</p>
+          </div>
+          <button
+            onClick={() => setAnnouncement(null)}
+            className="flex-shrink-0 ml-2 p-1.5 rounded-full hover:bg-white/20 transition-colors"
+          >
+            <X className="h-4 w-4 text-white" />
+          </button>
+        </div>
+        <div className="h-1 w-full bg-white/20">
+          <motion.div
+            className="h-full bg-white/40"
+            initial={{ width: "100%" }}
+            animate={{ width: "0%" }}
+            transition={{ duration: 5, ease: "linear" }}
+          />
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  );
+};
 
 const NotificationButton = ({
   notifications,
@@ -20,7 +62,10 @@ const NotificationButton = ({
 }) => (
   <div className="relative notifications-container">
     <button
-      onClick={() => setShowNotifications(!showNotifications)}
+      onClick={() => {
+        markAllAsRead();
+        setShowNotifications(!showNotifications);
+      }}
       className="p-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors relative"
     >
       <Bell size={24} className="text-blue-600" />
@@ -95,6 +140,7 @@ const Navbar = () => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [announcement, setAnnouncement] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -124,6 +170,9 @@ const Navbar = () => {
       case "booking":
         path = userRole === "tutor" ? "/tutorBookingReq" : "/Mybookings";
         break;
+      case "rating":
+        path = "/tutorBookingReq";
+        break;
       case "message":
         path = userRole === "tutor" ? "/tutorChat" : "/stdChat";
         break;
@@ -142,6 +191,22 @@ const Navbar = () => {
 
     setShowNotifications(false);
   };
+
+  useEffect(() => {
+    const handleNewAnnouncement = ({ title, content }) => {
+      setAnnouncement({ title, content });
+
+      setTimeout(() => {
+        setAnnouncement(null);
+      }, 5000);
+    };
+
+    socket.on("receive_announcements", handleNewAnnouncement);
+
+    return () => {
+      socket.off("receive_announcements", handleNewAnnouncement);
+    };
+  }, []);
 
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -274,7 +339,6 @@ const Navbar = () => {
       return [
         { href: "/tutorDashboard", text: "Dashboard" },
         { href: "/tutorBookingReq", text: "My Bookings" },
-        { href: "/students", text: "My Students" },
         { href: "/tutorChat", text: "Message" },
         { href: "/tutorTimeSlot", text: "TimeSlots" },
         { href: "/tutorAssignment", text: "Assignments" },
@@ -444,6 +508,10 @@ const Navbar = () => {
           </div>
         </div>
       </div>
+      <EnhancedAnnouncement
+        announcement={announcement}
+        setAnnouncement={setAnnouncement}
+      />
     </nav>
   );
 };

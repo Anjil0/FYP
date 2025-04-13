@@ -377,7 +377,7 @@ const getClosedAssignments = async (req, res, next) => {
       studentId: userId,
       tutorId: tutorID,
       isActive: true,
-      status: { $in: ["overdue", "unsubmitted", "completed"] },
+      status: { $in: ["overdue", "unsubmitted", "reviewed", "completed"] },
     };
 
     const assignments = await Assignment.find(query)
@@ -573,6 +573,12 @@ const provideFeedback = async (req, res, next) => {
     if (!assignment) {
       return next(
         createError(404, "Assignment not found or you don't have permission")
+      );
+    }
+
+    if (assignment.status !== "submitted") {
+      return next(
+        createError(400, "Feedback is allowed only after the due date.")
       );
     }
 

@@ -6,6 +6,7 @@ import {
   DollarSign,
   TrendingUp,
   Settings,
+  Bell,
   LogOut,
 } from "lucide-react";
 import axios from "axios";
@@ -71,10 +72,16 @@ const Sidebar = ({ selectedSection, setSelectedSection }) => {
             path: "/adminDashboard",
           },
           {
-            id: "settings",
+            id: "announcements",
+            icon: <Bell />,
+            label: "Announcements",
+            path: "/announcements",
+          },
+          {
+            id: "reports",
             icon: <Settings />,
-            label: "Settings",
-            path: "/adminDashboard",
+            label: "Generate Reports",
+            path: "/admin/generateReport",
           },
         ].map((item) => (
           <Link to={item.path} key={item.id}>

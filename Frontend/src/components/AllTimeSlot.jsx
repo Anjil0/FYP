@@ -141,7 +141,7 @@ const AllTimeSlots = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Header */}
-      <Toaster />
+      <Toaster richColors />  
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-2xl font-bold text-gray-800">Time Slots</h1>
         <button

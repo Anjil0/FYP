@@ -4,7 +4,7 @@ const timeSlotSchema = new mongoose.Schema(
   {
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "tutor",
+      ref: "Tutor",
       required: true,
     },
     timeSlots: [

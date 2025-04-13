@@ -5,7 +5,6 @@ import {
   User,
   Paperclip,
   X,
-  AlertCircle,
   ChevronDown,
   Check,
   Search,
@@ -13,6 +12,7 @@ import {
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import baseUrl from "../config/config";
+import { toast, Toaster } from "sonner";
 
 const CreateAssignment = () => {
   const navigate = useNavigate();
@@ -26,8 +26,6 @@ const CreateAssignment = () => {
   const [attachments, setAttachments] = useState([]);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -52,23 +50,21 @@ const CreateAssignment = () => {
             headers: { Authorization: `Bearer ${token}` },
           }
         );
-        // Check if the response has the expected structure
         if (
           response.data &&
           response.data.Result &&
           response.data.Result.bookings
         ) {
-          // Filter only active/ongoing bookings
           const activeBookings = response.data.Result.bookings.filter(
             (booking) => booking.status === "ongoing" && booking.isActive
           );
           setBookings(activeBookings);
         } else {
-          setError("Invalid response format from server");
+          toast.error("Invalid response format from server");
         }
       } catch (err) {
         console.error("Error fetching bookings:", err);
-        setError("Failed to load student bookings");
+        toast.error("Failed to load student bookings");
       } finally {
         setLoading(false);
       }
@@ -110,7 +106,7 @@ const CreateAssignment = () => {
       );
 
       if (!isValidType) {
-        setError(
+        toast.error(
           `File type ${fileExt} is not allowed. Only image and PDF files are permitted.`
         );
         return false;
@@ -142,7 +138,7 @@ const CreateAssignment = () => {
     }
 
     const newAttachments = [...attachments];
-    URL.revokeObjectURL(newAttachments[index].fileUrl); // Release object URL
+    URL.revokeObjectURL(newAttachments[index].fileUrl);
     newAttachments.splice(index, 1);
     setAttachments(newAttachments);
   };
@@ -150,13 +146,20 @@ const CreateAssignment = () => {
   // Submit the form
   const onSubmit = async (data) => {
     if (!selectedBooking) {
-      setError("Please select a student booking first");
+      toast.error("Please select a student booking first");
+      return;
+    }
+
+    // Validate due date
+    const today = new Date();
+    const dueDate = new Date(data.dueDate);
+
+    if (dueDate <= today) {
+      toast.error("Due date must be a future date.");
       return;
     }
 
     try {
-      setError("");
-      setSuccess("");
       setSubmitting(true);
 
       // Create FormData for submission with files
@@ -193,7 +196,7 @@ const CreateAssignment = () => {
       );
 
       if (response.data && response.data.IsSuccess) {
-        setSuccess("Assignment created successfully!");
+        toast.success("Assignment created successfully!");
         reset();
         setSelectedBooking(null);
         setAttachments([]);
@@ -204,11 +207,13 @@ const CreateAssignment = () => {
           navigate("/tutorAssignment");
         }, 2000);
       } else {
-        setError(response.data?.ErrorMessage || "Failed to create assignment");
+        toast.error(
+          response.data?.ErrorMessage || "Failed to create assignment"
+        );
       }
     } catch (err) {
       console.error("Error creating assignment:", err);
-      setError(
+      toast.error(
         err.response?.data?.ErrorMessage || "Failed to create assignment"
       );
     } finally {
@@ -247,6 +252,9 @@ const CreateAssignment = () => {
 
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-6">
+      {/* Add Toaster component */}
+      <Toaster position="top-right" richColors closeButton />
+
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
           Create New Assignment
@@ -257,8 +265,6 @@ const CreateAssignment = () => {
             reset();
             setSelectedBooking(null);
             setAttachments([]);
-            setError("");
-            setSuccess("");
             navigate(-1);
           }}
           className="px-6 py-3 text-m font-bold rounded-md border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
@@ -267,20 +273,6 @@ const CreateAssignment = () => {
           Back
         </button>
       </div>
-
-      {/* Error/Success Messages */}
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 flex items-start">
-          <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
-          <p>{error}</p>
-        </div>
-      )}
-
-      {success && (
-        <div className="mb-6 p-4 bg-green-50 border-l-4 border-green-500 text-green-700">
-          <p>{success}</p>
-        </div>
-      )}
 
       {/* Student Booking Selection Dropdown */}
       <div className="mb-8">
@@ -604,8 +596,6 @@ const CreateAssignment = () => {
                 reset();
                 setSelectedBooking(null);
                 setAttachments([]);
-                setError("");
-                setSuccess("");
               }}
               className="px-4 py-2 text-sm font-medium rounded-md border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               disabled={submitting}

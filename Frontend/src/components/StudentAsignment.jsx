@@ -11,10 +11,12 @@ import { toast, Toaster } from "sonner";
 import axios from "axios";
 import baseUrl from "../config/config";
 import SubmitAssignment from "./SubmitAssignment";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const AssignmentsList = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+
   const [openAssignments, setOpenAssignments] = useState([]);
   const [closedAssignments, setClosedAssignments] = useState([]);
   const [openExpanded, setOpenExpanded] = useState(true);
@@ -28,6 +30,25 @@ const AssignmentsList = () => {
   // State for the submit assignment modal
   const [submitModalOpen, setSubmitModalOpen] = useState(false);
   const [selectedAssignmentId, setSelectedAssignmentId] = useState(null);
+
+  // Get tutor ID from URL query parameters
+  const getSelectedTutorIdFromParams = () => {
+    const searchParams = new URLSearchParams(location.search);
+    return searchParams.get("tutorId");
+  };
+
+  // Update URL with selected tutor ID
+  const updateUrlWithTutorId = (tutorId) => {
+    const searchParams = new URLSearchParams(location.search);
+    searchParams.set("tutorId", tutorId);
+    navigate(
+      {
+        pathname: location.pathname,
+        search: searchParams.toString(),
+      },
+      { replace: true }
+    );
+  };
 
   useEffect(() => {
     const fetchTutors = async () => {
@@ -48,12 +69,32 @@ const AssignmentsList = () => {
             name: tutor.tutorName,
           }));
           setTutors(formattedTutors);
-          setSelectedTutor(formattedTutors[0]);
-          toast.success("Tutors loaded successfully");
-          // After setting the selected tutor, fetch assignments for that tutor
-          if (formattedTutors.length > 0) {
-            fetchAssignments(formattedTutors[0]._id);
+
+          // Get tutor ID from URL params
+          const tutorIdFromParams = getSelectedTutorIdFromParams();
+
+          // If tutor ID exists in params and matches one of our tutors, select it
+          if (tutorIdFromParams) {
+            const matchedTutor = formattedTutors.find(
+              (tutor) => tutor._id === tutorIdFromParams
+            );
+            if (matchedTutor) {
+              setSelectedTutor(matchedTutor);
+              fetchAssignments(matchedTutor._id);
+              toast.success(
+                `Showing assignments from Tutor ${matchedTutor.name}`
+              );
+              return;
+            }
           }
+
+          // Default to first tutor if no match or no param
+          setSelectedTutor(formattedTutors[0]);
+          // Update URL with default tutor ID
+          updateUrlWithTutorId(formattedTutors[0]._id);
+          toast.success("Tutors loaded successfully");
+          // Fetch assignments for the default tutor
+          fetchAssignments(formattedTutors[0]._id);
         } else {
           toast.warning("No tutors found");
           setLoading(false);
@@ -66,7 +107,7 @@ const AssignmentsList = () => {
     };
 
     fetchTutors();
-  }, [token]);
+  }, [token, location.search]);
 
   // Function to fetch assignments based on tutor ID
   const fetchAssignments = async (tutorId) => {
@@ -105,6 +146,9 @@ const AssignmentsList = () => {
     setIsDropdownOpen(false);
     toast.info(`Showing assignments from Tutor ${tutor.name}`);
 
+    // Update URL with selected tutor ID
+    updateUrlWithTutorId(tutor._id);
+
     // Fetch assignments for the selected tutor
     fetchAssignments(tutor._id);
   };
@@ -141,13 +185,25 @@ const AssignmentsList = () => {
       case "completed":
         return (
           <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800">
-            Completed
+            Completed yet to be reviewed
           </span>
         );
       case "overdue":
         return (
           <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-red-100 text-red-800">
             Overdue
+          </span>
+        );
+      case "UnSubmitted":
+        return (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-red-100 text-red-800">
+            UnSubmitted
+          </span>
+        );
+      case "reviewed":
+        return (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800">
+            Submitted and Reviewed By Tutor
           </span>
         );
       default:

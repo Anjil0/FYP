@@ -19,6 +19,7 @@ const startServer = async () => {
     app.set("io", io);
     app.set("userSocketMap", userSocketMap);
     app.set("userStatusMap", userStatusMap);
+   
 
     server.listen(port, () => {
       console.log(`🚀 Server is running on: http://localhost:${port}`);

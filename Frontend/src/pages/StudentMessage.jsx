@@ -195,7 +195,7 @@ const StudentMessagePage = () => {
       try {
         const token = localStorage.getItem("accessToken");
         const response = await axios.get(
-          `${baseUrl}/api/bookings/getStudentChatBookings`,
+          `${baseUrl}/api/bookings/getAllTutorinChat`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }

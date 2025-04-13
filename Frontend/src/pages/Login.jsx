@@ -4,7 +4,7 @@ import { useLoading } from "../config/LoadingContext";
 import { useNavigate, Link } from "react-router-dom";
 import { Toaster } from "sonner";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
-import { useState } from 'react';
+import { useState } from "react";
 
 const LoginPage = () => {
   const { setLoading } = useLoading();

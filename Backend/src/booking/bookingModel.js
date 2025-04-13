@@ -4,7 +4,7 @@ const bookingSchema = new mongoose.Schema(
   {
     studentId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "user",
+      ref: "User",
       required: true,
     },
     tutorId: {
@@ -50,6 +50,7 @@ const bookingSchema = new mongoose.Schema(
         "ongoing",
         "cancelled",
         "completed",
+        "rated",
       ],
       default: "pending",
     },

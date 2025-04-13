@@ -1,6 +1,9 @@
 // socket.js - Optimized server-side socket implementation
 
 const socketIo = require("socket.io");
+const UserModel = require("./src/users/userModel");
+const TutorModel = require("./src/tutors/tutorModel");
+const Notification = require("./src/notification/notificationModel");
 
 /**
  * Sets up and configures the Socket.IO server
@@ -24,9 +27,9 @@ module.exports = (server) => {
   });
 
   // State tracking maps
-  const userSocketMap = new Map(); // userId -> Set of socket IDs
-  const userStatusMap = new Map(); // userId -> online status
-  const roomMap = new Map(); // roomId -> Set of users in that room
+  const userSocketMap = new Map();
+  const userStatusMap = new Map();
+  const roomMap = new Map();
 
   // Event Handlers
   const handlers = {
@@ -329,6 +332,52 @@ module.exports = (server) => {
       socket.broadcast.emit("stopTyping", { bookingId });
     });
 
+    // Handle sending announcement
+    socket.on("send_announcement", async (data) => {
+      const { title, content, targetAudience } = data;
+
+      let userIdsToNotify = [];
+
+      try {
+        if (targetAudience === "all") {
+          // Notify all online users
+          userIdsToNotify = Array.from(userSocketMap.keys());
+        } else if (targetAudience === "students") {
+          for (let userId of userSocketMap.keys()) {
+            const user = await UserModel.findById(userId);
+            if (user && user.role === "user") {
+              userIdsToNotify.push(userId);
+            }
+          }
+        } else if (targetAudience === "tutors") {
+          // Get only the online tutors
+          for (let userId of userSocketMap.keys()) {
+            const tutor = await TutorModel.findById(userId);
+            if (tutor && tutor.role === "tutor") {
+              userIdsToNotify.push(userId);
+            }
+          }
+        }
+
+        console.log(userIdsToNotify);
+        // Send the announcement to all relevant users
+        userIdsToNotify.forEach((userId) => {
+          console.log(`Sending announcement to user ${userId}`);
+
+          const socketIds = userSocketMap.get(userId);
+
+          if (socketIds && socketIds.size > 0) {
+            socketIds.forEach((socketId) => {
+              io.to(socketId).emit("receive_announcements", { title, content });
+            });
+          }
+        });
+        await sendNotification(targetAudience, content);
+      } catch (err) {
+        console.error("Error processing announcement:", err);
+      }
+    });
+
     // Disconnection handler
     socket.on("disconnect", () => {
       handlers.handleDisconnect(socket, currentUserId);
@@ -352,4 +401,49 @@ module.exports = (server) => {
   }, 60000);
 
   return { io, userSocketMap, userStatusMap };
+};
+
+const sendNotification = async (target, message) => {
+  try {
+    let recipients = [];
+
+    if (target === "all") {
+      // Get all users
+      const users = await UserModel.find({}, "_id role");
+      // Get verified tutors
+      const tutors = await TutorModel.find(
+        { isVerified: "verified" },
+        "_id role"
+      );
+      recipients = [...users, ...tutors];
+    } else if (target === "tutors") {
+      // Get only verified tutors
+      recipients = await TutorModel.find(
+        { isVerified: "verified" },
+        "_id role"
+      );
+    } else if (target === "students") {
+      // Get only users
+      recipients = await UserModel.find({}, "_id role");
+    }
+
+    if (!recipients.length) {
+      console.log(`No recipients found for target: ${target}`);
+      return;
+    }
+
+    const notifications = recipients.map((recipient) => ({
+      recipient: recipient._id,
+      recipientModel: recipient.role === "tutor" ? "Tutor" : "User",
+      type: "other",
+      message: message,
+    }));
+
+    await Notification.insertMany(notifications);
+    console.log(
+      `Notifications sent successfully to ${recipients.length} recipients.`
+    );
+  } catch (error) {
+    console.error("Error sending notifications:", error);
+  }
 };
