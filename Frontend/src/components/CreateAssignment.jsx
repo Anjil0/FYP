@@ -573,7 +573,7 @@ const CreateAssignment = () => {
                         <button
                           type="button"
                           onClick={(e) => {
-                            e.stopPropagation(); // Prevent triggering the parent onClick
+                            e.stopPropagation(); 
                             removeAttachment(index, e);
                           }}
                           className="ml-2 text-gray-400 hover:text-red-500"

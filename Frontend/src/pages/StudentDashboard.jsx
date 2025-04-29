@@ -83,7 +83,8 @@ const StudentDashboard = () => {
       fiveMinsAfterEnd.toLocaleString()
     );
 
-    return today >= fiveMinsBeforeStart && today <= fiveMinsAfterEnd;
+     return today >= fiveMinsBeforeStart && today <= fiveMinsAfterEnd;
+    //  return true;
   };
 
   // Handle joining a session

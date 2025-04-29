@@ -175,7 +175,7 @@ const StudentMessagePage = () => {
     };
   }, [debouncedTyping]);
 
-  // Create a reusable status indicator component
+  // eslint-disable-next-line react/prop-types
   const StatusIndicator = ({ userId, size = "small" }) => {
     const isOnline = onlineUsers.has(userId);
     const sizeClasses = size === "small" ? "h-3 w-3" : "h-4 w-4";

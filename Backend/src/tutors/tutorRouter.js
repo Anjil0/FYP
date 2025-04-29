@@ -40,29 +40,22 @@ tutorRouter.put(
 );
 
 tutorRouter.get("/getAllTutors", getAllTutors);
-
 tutorRouter.get("/getVerifiedTutors", getVerifiedTutors);
-
 tutorRouter.get("/getTutorProfile/", authenticateToken, getTutorProfile);
-
 tutorRouter.get("/getTutorDetails/:id", getTutorDetails);
-
 tutorRouter.put(
   "/toogleAvailability/",
   authenticateToken,
   isTutor,
   toogleAvailability
 );
-
 tutorRouter.get(
   "/getTutorDashboardDetails/",
   authenticateToken,
   isTutor,
   getTutorDashboard
 );
-
 tutorRouter.post("/verifyTutor/:id", authenticateToken, isAdmin, verifyTutor);
-
 tutorRouter.get("/getAllUsers", authenticateToken, isAdmin, getAllUsers);
 
 module.exports = tutorRouter;

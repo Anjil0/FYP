@@ -1,5 +1,5 @@
 import { io } from 'socket.io-client';
-import baseUrl from './config/config';
+// import baseUrl from './config/config';
 
 const socket = io('http://localhost:5300', {
   withCredentials: true,

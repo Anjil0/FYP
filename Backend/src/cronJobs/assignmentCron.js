@@ -2,7 +2,6 @@ const cron = require("node-cron");
 const Assignment = require("../assignments/assignmentsModel");
 
 const checkOverdueAssignments = () => {
-  // Schedule cron job to run every minute
   cron.schedule("* * * * *", async () => {
     console.log("🔍 Checking for overdue assignments...");
 

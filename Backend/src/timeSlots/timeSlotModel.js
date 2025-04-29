@@ -75,5 +75,4 @@ timeSlotSchema.index({ subjectName: 1 });
 timeSlotSchema.index({ createdAt: -1 });
 
 const timeSlotModel = mongoose.model("TimeSlot", timeSlotSchema);
-
 module.exports = timeSlotModel;

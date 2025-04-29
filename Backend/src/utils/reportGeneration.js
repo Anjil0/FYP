@@ -1126,14 +1126,14 @@ async function generateExcelReport(reportData, dateRange) {
       column.width = 20;
     });
 
-    // Add a chart to the summary sheet if there's chart data
+    // Add chart data in tabular format instead of charts
     if (
       reportData.sections &&
       reportData.sections[0] &&
       reportData.sections[0].charts
     ) {
       summarySheet.addRow([]);
-      summarySheet.addRow(["Key Metrics Visualization"]);
+      summarySheet.addRow(["Key Metrics Visualization (Tabular Format)"]);
       summarySheet.getRow(10).font = { size: 14, bold: true };
 
       // Add chart data for the first chart
@@ -1141,31 +1141,16 @@ async function generateExcelReport(reportData, dateRange) {
         const chartData = reportData.sections[0].charts[0];
 
         // Add header row
-        summarySheet.addRow(["Label", "Value"]);
+        summarySheet.addRow([chartData.title]);
         summarySheet.getRow(12).font = { bold: true };
+        
+        // Add data headers
+        summarySheet.addRow(["Label", "Value"]);
+        summarySheet.getRow(13).font = { bold: true };
 
         // Add data rows
         chartData.data.forEach((item, index) => {
           summarySheet.addRow([item.label, item.value]);
-        });
-
-        // Create chart
-        const chart = workbook.addChart("column");
-        chart.title.text = chartData.title;
-        chart.legend = false;
-        chart.dataSource = {
-          chart: summarySheet,
-          rowStart: 13,
-          rowEnd: 13 + chartData.data.length - 1,
-          colStart: 1,
-          colEnd: 2,
-        };
-
-        // Add chart to worksheet
-        summarySheet.addRow([]);
-        summarySheet.addImage(chart, {
-          tl: { col: 1, row: 14 + chartData.data.length },
-          ext: { width: 600, height: 400 },
         });
       }
     }
@@ -1220,57 +1205,54 @@ async function generateExcelReport(reportData, dateRange) {
         rowIndex += 2;
       });
 
-      // Add chart data sheets for each chart
+      // Add chart data as tables
       if (section.charts && section.charts.length > 0) {
         section.charts.forEach((chart, chartIndex) => {
           // Add chart title
-          sectionSheet.addRow([chart.title]);
+          sectionSheet.addRow([chart.title + " (Data Table)"]);
           sectionSheet.getRow(rowIndex).font = { size: 14, bold: true };
           rowIndex++;
 
           // Add header row for chart data
           sectionSheet.addRow(["Label", "Value"]);
           sectionSheet.getRow(rowIndex).font = { bold: true };
-          const chartDataStartRow = rowIndex + 1;
           rowIndex++;
+
+          // Style headers
+          ["A", "B"].forEach(col => {
+            sectionSheet.getCell(`${col}${rowIndex-1}`).fill = {
+              type: "pattern",
+              pattern: "solid",
+              fgColor: { argb: "FFE0E0E0" },
+            };
+            sectionSheet.getCell(`${col}${rowIndex-1}`).border = {
+              top: { style: "thin" },
+              left: { style: "thin" },
+              bottom: { style: "thin" },
+              right: { style: "thin" },
+            };
+          });
 
           // Add data rows
           chart.data.forEach((item) => {
             sectionSheet.addRow([item.label, item.value]);
+            // Style cells
+            ["A", "B"].forEach(col => {
+              sectionSheet.getCell(`${col}${rowIndex}`).border = {
+                top: { style: "thin" },
+                left: { style: "thin" },
+                bottom: { style: "thin" },
+                right: { style: "thin" },
+              };
+            });
             rowIndex++;
           });
 
-          // Create chart based on type
-          let excelChart;
-
-          if (chart.type === "pie") {
-            excelChart = workbook.addChart("pie");
-          } else if (chart.type === "line") {
-            excelChart = workbook.addChart("line");
-          } else {
-            // Default to column chart
-            excelChart = workbook.addChart("column");
-          }
-
-          // Configure chart
-          excelChart.title.text = chart.title;
-          excelChart.legend = true;
-          excelChart.dataSource = {
-            chart: sectionSheet,
-            rowStart: chartDataStartRow,
-            rowEnd: chartDataStartRow + chart.data.length - 1,
-            colStart: 1,
-            colEnd: 2,
-          };
-
-          // Add chart to worksheet
+          // Add note about charts
           sectionSheet.addRow([]);
-          rowIndex++;
-
-          // Note: Excel.js doesn't actually render charts in the buffer,
-          // but this sets up the chart data for Excel to render when opened
-
-          rowIndex += 20; // Space for chart
+          sectionSheet.addRow(["Note: Chart visualization is not available in this export. Please refer to the data table above."]);
+          sectionSheet.getRow(rowIndex+1).font = { italic: true };
+          rowIndex += 3;
         });
       }
 
@@ -1316,7 +1298,38 @@ async function generateExcelReport(reportData, dateRange) {
         });
       }
 
-      // Add other raw data tables as needed
+      // Monthly booking data if available
+      if (reportData.rawData.bookingReport && reportData.rawData.bookingReport.monthlyBookings) {
+        dataSheet.addRow([]);
+        dataSheet.addRow(["Monthly Booking Trends"]);
+        dataSheet.getRow(dataSheet.rowCount).font = { bold: true };
+
+        // Add headers
+        dataSheet.addRow(["Month", "Bookings"]);
+        dataSheet.getRow(dataSheet.rowCount).font = { bold: true };
+
+        // Add data
+        reportData.rawData.bookingReport.monthlyBookings.forEach((item) => {
+          dataSheet.addRow([item.month, item.count]);
+        });
+      }
+
+      // Monthly revenue data if available
+      if (reportData.rawData.paymentReport && reportData.rawData.paymentReport.monthlyRevenue) {
+        dataSheet.addRow([]);
+        dataSheet.addRow(["Monthly Revenue Trends"]);
+        dataSheet.getRow(dataSheet.rowCount).font = { bold: true };
+
+        // Add headers
+        dataSheet.addRow(["Month", "Revenue (NPR)"]);
+        dataSheet.getRow(dataSheet.rowCount).font = { bold: true };
+
+        // Add data
+        reportData.rawData.paymentReport.monthlyRevenue.forEach((item) => {
+          dataSheet.addRow([item.month, item.amount]);
+        });
+      }
+
       dataSheet.addRow([]);
       dataSheet.addRow([
         "Full data is available in JSON format for further processing.",

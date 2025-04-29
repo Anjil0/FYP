@@ -65,12 +65,12 @@ const Sidebar = ({ selectedSection, setSelectedSection }) => {
             label: "Tutor Verification",
             path: "/tutorVerification",
           },
-          {
-            id: "payments",
-            icon: <DollarSign />,
-            label: "Payments",
-            path: "/adminDashboard",
-          },
+          // {
+          //   id: "payments",
+          //   icon: <DollarSign />,
+          //   label: "Payments",
+          //   path: "/adminDashboard",
+          // },
           {
             id: "announcements",
             icon: <Bell />,

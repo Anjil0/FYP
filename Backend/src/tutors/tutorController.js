@@ -48,6 +48,10 @@ const signupTutor = async (req, res, next) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    if (!req.files) {
+      return next(createError(400, "Image and certificateImage are required."));
+    }
+    
     let imageUrl = "";
     if (req.files.image) {
       const imagePath = getFilePath(req.files.image[0].filename);

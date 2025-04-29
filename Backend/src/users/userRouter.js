@@ -26,23 +26,14 @@ const { previewReport, downloadReport } = require("../utils/reportGeneration");
 const userRouter = express.Router();
 
 userRouter.post("/register", upload.single("image"), registerUser);
-
 userRouter.post("/login", loginUser);
-
 userRouter.post("/logout", handleLogout);
-
 userRouter.get("/getUserDetails/", authenticateToken, isUser, getUserDetails);
-
 userRouter.post("/verifyEmail", verifyEmail);
-
 userRouter.post("/forgotPassword", forgotPassword);
-
 userRouter.get("/verifyResetLink/:code", verifyResetLink);
-
 userRouter.post("/resetPassword", resetPassword);
-
 userRouter.post("/resendCode", resendVerificationCode);
-
 userRouter.put(
   "/updateUser",
   upload.single("image"),
@@ -50,9 +41,7 @@ userRouter.put(
   isUser,
   updateUserDetails
 );
-
 userRouter.post("/toggleRole/:id", authenticateToken, toggleRole);
-
 userRouter.get(
   "/getAdminDashboard/",
   authenticateToken,

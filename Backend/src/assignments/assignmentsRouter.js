@@ -4,14 +4,13 @@ const {
   authenticateToken,
   isTutor,
   isUser,
-  isAdmin,
 } = require("../middlewares/authHandle");
 
 const upload = require("../middlewares/multerConfig");
 
 const assignmentController = require("./assignmentsController");
 
-// the tutor can upload image and pdf , 1 also or both also
+// Create a new assignment (tutor only)
 assignmentRouter.post(
   "/createAssignments",
   authenticateToken,
@@ -19,14 +18,6 @@ assignmentRouter.post(
   upload.fields([{ name: "files", maxCount: 3 }]),
   assignmentController.createAssignment
 );
-
-// // Get all assignments for a student
-// assignmentRouter.get(
-//   "/getStudentAssignments/",
-//   authenticateToken,
-//   isUser,
-//   assignmentController.getStudentAssignments
-// );
 
 // Get all assignments for a Opne student of a specific tutor
 assignmentRouter.get(

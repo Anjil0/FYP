@@ -4,10 +4,13 @@ const http = require("http");
 const initializeSockets = require("./socket");
 const checkOverdueAssignments = require("./src/cronJobs/assignmentCron");
 const updateBookingStatuses = require("./src/cronJobs/bookingCron");
+const createDefaultAdmin = require("./src/utils/adminSeed");
 
 const startServer = async () => {
   try {
     await connectDB();
+
+    await createDefaultAdmin();
 
     const port = process.env.PORT || 3000;
     const server = http.createServer(app);
@@ -19,7 +22,6 @@ const startServer = async () => {
     app.set("io", io);
     app.set("userSocketMap", userSocketMap);
     app.set("userStatusMap", userStatusMap);
-   
 
     server.listen(port, () => {
       console.log(`🚀 Server is running on: http://localhost:${port}`);

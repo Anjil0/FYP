@@ -228,6 +228,7 @@ const TutorDashboard = () => {
     );
 
     return today >= fiveMinsBeforeStart && today <= fiveMinsAfterEnd;
+    // return true;
   };
 
   // Toggle availability

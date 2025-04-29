@@ -27,23 +27,19 @@ timeSlotRouter.get(
   isTutor,
   getAllTimeSlots
 );
-
 timeSlotRouter.get("/getAllTimeSlots/:tutorId", getAllTimeSlots);
-
 timeSlotRouter.put(
   "/updateTimeSlot/:slotId",
   authenticateToken,
   isTutor,
   updatedTimeSlot
 );
-
 timeSlotRouter.delete(
   "/deleteTimeSlot/:slotId",
   authenticateToken,
   isTutor,
   deleteTimeSlot
 );
-
 timeSlotRouter.delete(
   "/deleteSpecificTimeSlot/:slotId/:timeSlotId",
   authenticateToken,

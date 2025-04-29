@@ -2,7 +2,6 @@ const cron = require("node-cron");
 const Booking = require("../booking/bookingModel");
 
 const updateBookingStatuses = () => {
-  // Schedule cron job to run every minute
   cron.schedule("* * * * *", async () => {
     console.log("🔍 Checking and updating booking statuses...");
 

@@ -18,7 +18,6 @@ const {
   authenticateToken,
   isTutor,
   isUser,
-  isAdmin,
 } = require("../middlewares/authHandle");
 
 // Create new booking (Student)

@@ -7,7 +7,7 @@ const { authenticateToken, isUser } = require("../middlewares/authHandle");
 
 const paymentRouter = express.Router();
 
-paymentRouter.post("/payBooking", authenticateToken, bookingPayment);
+paymentRouter.post("/payBooking", authenticateToken,isUser, bookingPayment);
 paymentRouter.get("/completeKhaltiPayment", completeKhaltiPayment);
 
 module.exports = paymentRouter;

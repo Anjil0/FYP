@@ -88,8 +88,8 @@ const getRecommendedTutors = async (req, res) => {
           id: tutor._id.toString(),
           username: tutor.username,
           subjects: subjects,
-          gradeLevels: gradeLevels, 
-          subjectDetails: subjectDetails, 
+          gradeLevels: gradeLevels,
+          subjectDetails: subjectDetails,
           address: tutor.address,
           rating: avgRating.toFixed(1),
           bookingsCount: bookingsCount,
@@ -122,98 +122,105 @@ const getRecommendedTutors = async (req, res) => {
         tutors: tutorsWithDetails,
       });
 
+      console.log(response.data);
+
       // Create a Map for quick lookup of original tutor details by ID
       const tutorsMap = new Map(
         tutorsWithDetails.map((tutor) => [tutor.id, tutor])
       );
-      console.log(response.data);
-      // Map the recommendations to include additional inf
+
+      // Map the recommendations to include additional info
       // Enhance recommended tutors with additional frontend-friendly information
-      const enhancedRecommendations = response.data.map((recommendation) => {
-        const tutorId = recommendation.id;
-        const originalTutor = tutorsMap.get(tutorId);
+      const enhancedRecommendations = response.data
+        .filter((recommendation) => {
+          // Filter out tutors with combined_score that would round to 0.00 in .2f format
+          return recommendation.combined_score >= 0.005; // This will ensure scores below 0.005 (which round to 0.00) are filtered out
+        })
+        .map((recommendation) => {
+          const tutorId = recommendation.id;
+          const originalTutor = tutorsMap.get(tutorId);
 
-        if (!originalTutor) {
-          return recommendation; 
-        }
+          if (!originalTutor) {
+            return recommendation;
+          }
 
-        // Calculate recommendation reasons
-        const recommendationReasons = [];
+          // Calculate recommendation reasons
+          const recommendationReasons = [];
 
-        // Add subject match reason if available
-        if (
-          recommendation.subject_match_score > 0.1 &&
-          userData.preferredSubjects.length > 0
-        ) {
-          const matchingSubjects = originalTutor.subjects.filter((subject) =>
-            userData.preferredSubjects.some((pref) =>
-              subject.toLowerCase().includes(pref.toLowerCase())
-            )
-          );
+          // Add subject match reason if available
+          if (
+            recommendation.subject_match_score > 0.1 &&
+            userData.preferredSubjects.length > 0
+          ) {
+            const matchingSubjects = originalTutor.subjects.filter((subject) =>
+              userData.preferredSubjects.some((pref) =>
+                subject.toLowerCase().includes(pref.toLowerCase())
+              )
+            );
 
-          if (matchingSubjects.length > 0) {
-            const subjectList = matchingSubjects.join(", ");
+            if (matchingSubjects.length > 0) {
+              const subjectList = matchingSubjects.join(", ");
+              recommendationReasons.push(
+                `Teaches your preferred subject${
+                  matchingSubjects.length > 1 ? "s" : ""
+                }: ${subjectList}`
+              );
+            }
+          }
+
+          // Add rating reason if available
+          if (parseFloat(originalTutor.rating) >= 4.0) {
             recommendationReasons.push(
-              `Teaches your preferred subject${
-                matchingSubjects.length > 1 ? "s" : ""
-              }: ${subjectList}`
+              `Highly rated (${originalTutor.rating}/5)`
             );
           }
-        }
 
-        // Add rating reason if available
-        if (parseFloat(originalTutor.rating) >= 4.0) {
-          recommendationReasons.push(
-            `Highly rated (${originalTutor.rating}/5)`
-          );
-        }
+          // Add experience reason if available
+          if (
+            originalTutor.experience &&
+            originalTutor.experience.includes("year")
+          ) {
+            recommendationReasons.push(`Experienced tutor`);
+          }
 
-        // Add experience reason if available
-        if (
-          originalTutor.experience &&
-          originalTutor.experience.includes("year")
-        ) {
-          recommendationReasons.push(`Experienced tutor`);
-        }
+          // Add grade level match reason if available
+          if (
+            userData.grade &&
+            originalTutor.gradeLevels.some((grade) =>
+              grade.toLowerCase().includes(userData.grade.toLowerCase())
+            )
+          ) {
+            recommendationReasons.push(`Teaches your grade level`);
+          }
 
-        // Add grade level match reason if available
-        if (
-          userData.grade &&
-          originalTutor.gradeLevels.some((grade) =>
-            grade.toLowerCase().includes(userData.grade.toLowerCase())
-          )
-        ) {
-          recommendationReasons.push(`Teaches your grade level`);
-        }
+          // Add location match reason if service detected one (based on score)
+          if (
+            recommendation.location_match_score &&
+            recommendation.location_match_score > 0.5
+          ) {
+            recommendationReasons.push(`Convenient location`);
+          }
 
-        // Add location match reason if service detected one (based on score)
-        if (
-          recommendation.location_match_score &&
-          recommendation.location_match_score > 0.5
-        ) {
-          recommendationReasons.push(`Convenient location`);
-        }
+          // Add booking popularity reason if applicable
+          if (originalTutor.bookingsCount > 10) {
+            recommendationReasons.push(
+              `Popular tutor (${originalTutor.bookingsCount}+ sessions completed)`
+            );
+          }
 
-        // Add booking popularity reason if applicable
-        if (originalTutor.bookingsCount > 10) {
-          recommendationReasons.push(
-            `Popular tutor (${originalTutor.bookingsCount}+ sessions completed)`
-          );
-        }
+          // If no specific reasons, add a generic one
+          if (recommendationReasons.length === 0) {
+            recommendationReasons.push("Recommended based on your preferences");
+          }
 
-        // If no specific reasons, add a generic one
-        if (recommendationReasons.length === 0) {
-          recommendationReasons.push("Recommended based on your preferences");
-        }
-
-        // Create frontend-friendly recommendation info
-        return {
-          ...originalTutor,
-          recommendationScore:
-            recommendation.combined_score || recommendation.score || 0,
-          recommendationReasons: recommendationReasons.slice(0, 3),
-        };
-      });
+          // Create frontend-friendly recommendation info
+          return {
+            ...originalTutor,
+            recommendationScore:
+              recommendation.combined_score || recommendation.score || 0,
+            recommendationReasons: recommendationReasons.slice(0, 3),
+          };
+        });
 
       // Success - return the enhanced recommendations
       return res.json(enhancedRecommendations);

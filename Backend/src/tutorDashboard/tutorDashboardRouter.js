@@ -18,19 +18,16 @@ tutorDashboardRouter.put(
   "/toggleAvailability",
   tutorDashboardController.toggleAvailability
 );
-
 // Get recent assignments
 tutorDashboardRouter.get(
   "/recentAssignments",
   tutorDashboardController.getRecentAssignments
 );
-
 // Get earnings statistics
 tutorDashboardRouter.get(
   "/earningsStats",
   tutorDashboardController.getEarningsStats
 );
-
 // Get upcoming sessions
 tutorDashboardRouter.get(
   "/upcomingSessions",

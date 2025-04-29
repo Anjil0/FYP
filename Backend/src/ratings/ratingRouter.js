@@ -8,7 +8,6 @@ const {
 const {
   authenticateToken,
   isUser,
-  isAdmin,
 } = require("../middlewares/authHandle");
 
 const ratingRouter = express.Router();
@@ -19,3 +18,5 @@ ratingRouter.get("/getRatingsByTutorId/:id", getRatingsByTutorId);
 ratingRouter.get("/getAllRatings/", getAllRatings);
 
 module.exports = ratingRouter;
+
+
