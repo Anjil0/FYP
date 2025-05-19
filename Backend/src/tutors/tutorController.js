@@ -34,16 +34,25 @@ const signupTutor = async (req, res, next) => {
   } = req.body;
 
   try {
-    const userExists = await userModel.findOne({ email });
+    const userExists = await userModel.findOne({
+      $or: [{ email }, { phoneNumber }],
+    });
     if (userExists) {
       return next(
-        createError(400, "Email is already registered as a Student.")
+        createError(
+          400,
+          "Email or phone number is already registered as a Student."
+        )
       );
     }
 
-    const tutorExists = await tutorModel.findOne({ email });
+    const tutorExists = await tutorModel.findOne({
+      $or: [{ email }, { phoneNumber }],
+    });
     if (tutorExists) {
-      return next(createError(400, "Email is already registered."));
+      return next(
+        createError(400, "Email or phone number is already registered.")
+      );
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -51,7 +60,7 @@ const signupTutor = async (req, res, next) => {
     if (!req.files) {
       return next(createError(400, "Image and certificateImage are required."));
     }
-    
+
     let imageUrl = "";
     if (req.files.image) {
       const imagePath = getFilePath(req.files.image[0].filename);
@@ -172,7 +181,7 @@ const getVerifiedTutors = async (req, res, next) => {
                   },
                 },
               },
-              0, // Default rating if no ratings exist
+              0, 
             ],
           },
         },
@@ -330,42 +339,22 @@ const getTutorDashboard = async (req, res, next) => {
 };
 
 const getAllUsers = async (req, res, next) => {
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 10;
-
-  if (limit > 10) {
-    return res.status(400).json({
-      StatusCode: 400,
-      IsSuccess: false,
-      ErrorMessage: "Limit cannot exceed more than 10",
-    });
-  }
-  const skip = (page - 1) * limit;
-
   try {
     const [users, tutors] = await Promise.all([
-      userModel.find().skip(skip).limit(limit).select("-password"),
-      tutorModel.find().skip(skip).limit(limit).select("-password"),
+      userModel.find().select("-password"),
+      tutorModel.find().select("-password"),
     ]);
 
-    const totalUsers =
-      (await userModel.countDocuments()) + (await tutorModel.countDocuments());
-    const totalPages = Math.ceil(totalUsers / limit);
+    const totalUsers = users.length + tutors.length;
 
     if (!totalUsers) {
       return next(createError(400, `No users available`));
-    }
-
-    if (page > totalPages) {
-      return next(createError(400, `Invalid Page Number`));
     }
 
     const formattedUsers = {
       users: users,
       tutors: tutors,
     };
-
-    const currentPageSize = users.length + tutors.length;
 
     res.json({
       StatusCode: 200,
@@ -374,11 +363,11 @@ const getAllUsers = async (req, res, next) => {
       Result: {
         message: "Successfully fetched all users",
         data: formattedUsers,
-        pagination: {
+        totalCount: {
           totalUsers,
-          totalPages,
-          currentPage: page,
-          pageSize: currentPageSize,
+          totalStudents: users.filter((user) => user.role === "user").length,
+          totalTutors: tutors.length,
+          totalAdmins: users.filter((user) => user.role === "admin").length,
         },
       },
     });

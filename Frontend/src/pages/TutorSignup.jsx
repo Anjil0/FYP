@@ -127,8 +127,8 @@ const TutorSignup = () => {
         toast.error("Age is required");
         return false;
       }
-      if (formData.age < 10) {
-        toast.error("Age must be at least 10");
+      if (formData.age < 18) {
+        toast.error("Age must be at least 18 to become a tutor");
         return false;
       }
       if (!formData.gender) {
@@ -382,7 +382,7 @@ const TutorSignup = () => {
             id="age"
             type="number"
             name="age"
-            min={10}
+            min={18}
             placeholder="Enter your age"
             value={formData.age}
             onChange={handleInputChange}

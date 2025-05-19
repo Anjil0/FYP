@@ -118,7 +118,7 @@ const tutorApprovalTemplate = `
           <p style="text-align: center;">Your profile has been successfully verified on <strong>TutorEase</strong>.</p>
           <p style="text-align: center;">We are excited to have you join our community of educators. You can now start offering your tutoring services to students.</p>
           <div style="text-align: center; margin-top: 30px;">
-            <a href="https://www.tutorease.com" style="display: inline-block; padding: 10px 20px; background-color: #4CAF50; color: #ffffff; text-decoration: none; border-radius: 5px;">Go to TutorEase</a>
+            <a href="http://localhost:5173/" style="display: inline-block; padding: 10px 20px; background-color: #4CAF50; color: #ffffff; text-decoration: none; border-radius: 5px;">Go to TutorEase</a>
           </div>
           <p style="text-align: center; margin-top: 30px;">Thank you for being a part of TutorEase.</p>
           <p style="text-align: center;">Best Regards,<br>TutorEase Team</p>
@@ -133,7 +133,7 @@ const tutorRejectionTemplate = `
         <p style="text-align: center;">To ensure the highest quality of tutoring services, we require all tutors to have valid and verifiable certifications.</p>
         <p style="text-align: center;">Please review your certificates and upload the correct certification documents. You are welcome to reapply on <strong>TutorEase</strong> after making the necessary updates.</p>
         <div style="text-align: center; margin-top: 30px;">
-          <a href="https://www.tutorease.com" style="display: inline-block; padding: 10px 20px; background-color: #F44336; color: #ffffff; text-decoration: none; border-radius: 5px;">Go to TutorEase</a>
+          <a href="http://localhost:5173/" style="display: inline-block; padding: 10px 20px; background-color: #F44336; color: #ffffff; text-decoration: none; border-radius: 5px;">Go to TutorEase</a>
         </div>
         <p style="text-align: center; margin-top: 30px;">If you have any questions or need assistance, feel free to contact our support team.</p>
         <p style="text-align: center;">We look forward to your successful reapplication.</p>

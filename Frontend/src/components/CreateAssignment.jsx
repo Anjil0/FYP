@@ -152,17 +152,20 @@ const CreateAssignment = () => {
 
     // Validate due date
     const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+
     const dueDate = new Date(data.dueDate);
 
-    if (dueDate <= today) {
-      toast.error("Due date must be a future date.");
+    if (dueDate < tomorrow) {
+      toast.error("Due date must be at least one day in the future.");
       return;
     }
 
     try {
       setSubmitting(true);
 
-      // Create FormData for submission with files
       const formData = new FormData();
 
       // Add basic assignment data
@@ -178,6 +181,7 @@ const CreateAssignment = () => {
       });
 
       // API call to create assignment
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       const response = await axios.post(
         `${baseUrl}/api/assignments/createAssignments`,
         formData,
@@ -451,6 +455,11 @@ const CreateAssignment = () => {
             <input
               id="dueDate"
               type="datetime-local"
+              min={(() => {
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                return tomorrow.toISOString().slice(0, 16);
+              })()}
               {...register("dueDate", { required: "Due date is required" })}
               className={`w-full rounded-md border ${
                 errors.dueDate ? "border-red-500" : "border-gray-300"
@@ -573,7 +582,7 @@ const CreateAssignment = () => {
                         <button
                           type="button"
                           onClick={(e) => {
-                            e.stopPropagation(); 
+                            e.stopPropagation();
                             removeAttachment(index, e);
                           }}
                           className="ml-2 text-gray-400 hover:text-red-500"

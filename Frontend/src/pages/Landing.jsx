@@ -299,21 +299,24 @@ const LandingPage = () => {
               {
                 name: "Aarav Sharma",
                 role: "Student, Grade 10",
-                image: "/placeholder.svg?height=100&width=100&text=AS",
+                image:
+                  "https://images.unsplash.com/photo-1633332755192-727a05c4013d?fm=jpg&q=60&w=3000&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8dXNlcnxlbnwwfHwwfHx8MA%3D%3D",
                 quote:
                   "TutorEase helped me find the perfect math tutor who explained concepts in a way I could understand. My grades have improved significantly!",
               },
               {
                 name: "Priya Patel",
                 role: "Tutor, Mathematics",
-                image: "/placeholder.svg?height=100&width=100&text=PP",
+                image:
+                  "https://i.pinimg.com/236x/39/19/0d/39190d35334ba7d7d5e70c059baa928e.jpg",
                 quote:
                   "As a tutor, TutorEase has connected me with students who truly benefit from my teaching style. The platform is intuitive and easy to use.",
               },
               {
-                name: "Aarav Sharma",
-                role: "Student, Grade 10",
-                image: "/placeholder.svg?height=100&width=100&text=AS",
+                name: "Smarkia Sharma",
+                role: "Student, Bachelors",
+                image:
+                  "https://img.freepik.com/free-photo/shot-positive-european-young-female-with-dark-curly-hair-has-gentle-smile-freckled-skin-wears-casual-beige-shirt_273609-15736.jpg?semt=ais_hybrid&w=740",
                 quote:
                   "TutorEase helped me find the perfect math tutor who explained concepts in a way I could understand. My grades have improved significantly!",
               },
@@ -485,7 +488,7 @@ const LandingPage = () => {
                 href="tutors"
                 className="text-blue-200 hover:text-white transition-colors"
               >
-                Contact
+                Tutors
               </a>
             </div>
             <div className="flex space-x-4">

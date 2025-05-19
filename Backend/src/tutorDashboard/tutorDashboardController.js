@@ -183,12 +183,27 @@ exports.getTutorDashboardDetails = async (req, res) => {
           ).toFixed(1)
         : 100;
 
-    // Get repeat student rate
     const repeatStudentCount = await bookingModel.aggregate([
-      { $match: { tutorId: new mongoose.Types.ObjectId(tutorId) } },
-      { $group: { _id: "$studentId", count: { $sum: 1 } } },
-      { $match: { count: { $gt: 1 } } },
-      { $count: "repeatStudents" },
+      {
+        $match: {
+          tutorId: new mongoose.Types.ObjectId(tutorId),
+          status: { $in: ["ongoing", "completed"] },
+        },
+      },
+      {
+        $group: {
+          _id: "$studentId",
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $match: {
+          count: { $gt: 1 },
+        },
+      },
+      {
+        $count: "repeatStudents",
+      },
     ]);
 
     const totalStudentCount = uniqueStudents.length;
@@ -256,85 +271,6 @@ exports.getTutorDashboardDetails = async (req, res) => {
     });
   }
 };
-
-// Get upcoming sessions for tutor
-async function getUpcomingSessionsForTutor(tutorId) {
-  try {
-    const now = moment();
-    const todayWeekday = moment().format("dddd");
-
-    // Fetch active ongoing bookings for the tutor
-    const upcomingBookings = await bookingModel
-      .find({
-        tutorId: new mongoose.Types.ObjectId(tutorId),
-        status: { $in: ["tutorConfirmed", "ongoing"] },
-        isActive: true,
-      })
-      .populate({
-        path: "studentId",
-        select: "username image",
-      })
-      .populate({
-        path: "tutorId",
-        select: "username",
-      })
-      .populate({
-        path: "timeSlotId",
-        select: "timeSlots daysOfWeek subjectName fee",
-      })
-      .sort({ startDate: 1 })
-      .limit(5);
-
-    // Filter bookings for today's weekday
-    const filteredBookings = upcomingBookings.filter((booking) =>
-      booking.timeSlotId.daysOfWeek.includes(todayWeekday)
-    );
-
-    // Format data for frontend
-    const upcomingSessions = filteredBookings
-      .map((booking) => {
-        const timeSlotDetails = booking.timeSlotId.timeSlots.find(
-          (slot) =>
-            slot._id.toString() === booking.specificTimeSlotId.toString()
-        );
-
-        if (!timeSlotDetails) return null;
-
-        // Convert stored 12-hour time format to moment.js time
-        const sessionStartTime = moment(timeSlotDetails.startTime, "h:mm A");
-        const sessionEndTime = moment(timeSlotDetails.endTime, "h:mm A");
-
-        // Exclude if the session's end time has already passed
-        if (now.isAfter(sessionEndTime)) return null;
-
-        return {
-          _id: booking._id,
-          studentId: booking.studentId._id,
-          studentName: booking.studentId.username,
-          studentImage: booking.studentId.image,
-          startDate: booking.startDate,
-          endDate: booking.endDate,
-          bookName: booking.timeSlotId.subjectName,
-          status: booking.status,
-          paymentStatus: booking.paymentStatus,
-          todayWeekday,
-          timeSlotDetails: {
-            _id: booking.specificTimeSlotId,
-            startTime: timeSlotDetails.startTime,
-            endTime: timeSlotDetails.endTime,
-          },
-          yourName: booking.tutorId.username,
-          anotherPersonName: booking.studentId.username,
-        };
-      })
-      .filter((session) => session !== null);
-
-    return upcomingSessions;
-  } catch (error) {
-    console.error("Error getting upcoming sessions for tutor:", error);
-    return [];
-  }
-}
 
 // Toggle tutor availability
 exports.toggleAvailability = async (req, res) => {
@@ -561,3 +497,138 @@ exports.getUpcomingSessions = async (req, res) => {
     });
   }
 };
+
+// Get upcoming sessions for tutor
+async function getUpcomingSessionsForTutor(tutorId) {
+  try {
+    const now = moment();
+
+    const upcomingBookings = await bookingModel
+      .find({
+        tutorId: new mongoose.Types.ObjectId(tutorId),
+        status: { $in: ["tutorConfirmed", "ongoing"] },
+        teachingMode: "online",
+        isActive: true,
+      })
+      .populate({
+        path: "studentId",
+        select: "username image",
+      })
+      .populate({
+        path: "tutorId",
+        select: "username",
+      })
+      .populate({
+        path: "timeSlotId",
+        select: "timeSlots daysOfWeek subjectName fee",
+      })
+      .sort({ startDate: 1 });
+
+    let allSessions = [];
+
+    for (const booking of upcomingBookings) {
+      const timeSlotDetails = booking.timeSlotId.timeSlots.find(
+        (slot) => slot._id.toString() === booking.specificTimeSlotId.toString()
+      );
+
+      if (!timeSlotDetails) continue;
+
+      const startTime = moment(timeSlotDetails.startTime, "h:mm A");
+      const endTime = moment(timeSlotDetails.endTime, "h:mm A");
+
+      // Generate up to 4 future sessions
+      const futureSessions = findNextMultipleSessionDates(
+        booking.timeSlotId.daysOfWeek,
+        startTime,
+        endTime,
+        4
+      );
+
+      futureSessions.forEach((session) => {
+        const { sessionStartTime, sessionEndTime } = session;
+
+        if (now.isAfter(sessionEndTime)) return;
+
+        allSessions.push({
+          _id: booking._id,
+          studentId: booking.studentId._id,
+          studentName: booking.studentId.username,
+          studentImage: booking.studentId.image,
+          startDate: booking.startDate,
+          endDate: booking.endDate,
+          bookName: booking.timeSlotId.subjectName,
+          status: booking.status,
+          paymentStatus: booking.paymentStatus,
+          nextSessionDate: sessionStartTime.format("YYYY-MM-DD"),
+          dayName: sessionStartTime.format("dddd"),
+          timeSlotDetails: {
+            _id: booking.specificTimeSlotId,
+            startTime: timeSlotDetails.startTime,
+            endTime: timeSlotDetails.endTime,
+            nextStartTime: sessionStartTime.format("YYYY-MM-DD HH:mm:ss"),
+            nextEndTime: sessionEndTime.format("YYYY-MM-DD HH:mm:ss"),
+          },
+          yourName: booking.tutorId.username,
+          anotherPersonName: booking.studentId.username,
+        });
+      });
+    }
+
+    // Sort by time and limit to 4
+    const upcomingSessions = allSessions
+      .sort((a, b) =>
+        moment(a.timeSlotDetails.nextStartTime).diff(
+          moment(b.timeSlotDetails.nextStartTime)
+        )
+      )
+      .slice(0, 4);
+
+    return upcomingSessions;
+  } catch (error) {
+    console.error("Error getting upcoming sessions for tutor:", error);
+    return [];
+  }
+}
+
+function findNextMultipleSessionDates(daysOfWeek, startTime, endTime, count) {
+  const now = moment();
+  const weekdays = [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+  ];
+  const sessionDays = daysOfWeek.map((day) => weekdays.indexOf(day));
+  let futureSessions = [];
+
+  let dayOffset = 0;
+  while (futureSessions.length < count && dayOffset < 30) {
+    const checkDate = moment().add(dayOffset, "days");
+    const checkDay = checkDate.day();
+
+    if (sessionDays.includes(checkDay)) {
+      const sessionStartTime = checkDate
+        .clone()
+        .hour(startTime.hour())
+        .minute(startTime.minute())
+        .second(0);
+
+      const sessionEndTime = checkDate
+        .clone()
+        .hour(endTime.hour())
+        .minute(endTime.minute())
+        .second(0);
+
+      if (sessionEndTime.isAfter(now)) {
+        futureSessions.push({ sessionStartTime, sessionEndTime });
+      }
+    }
+
+    dayOffset++;
+  }
+
+  return futureSessions;
+}

@@ -50,6 +50,15 @@ const StudentDashboard = () => {
 
     if (!startTimeStr || !endTimeStr) return false;
 
+    // Check if today's day matches the session day
+    const todayDay = today
+      .toLocaleDateString("en-US", { weekday: "long" })
+      .slice(0, 3);
+    const sessionDay = session.dayName.slice(0, 3);
+    // console.log("Today's Day:", todayDay);
+    // console.log("Session Day:", sessionDay);
+    if (todayDay !== sessionDay) return false;
+
     const datePart = today.toISOString().split("T")[0];
 
     const convertTo24Hr = (timeStr) => {
@@ -83,8 +92,8 @@ const StudentDashboard = () => {
       fiveMinsAfterEnd.toLocaleString()
     );
 
-     return today >= fiveMinsBeforeStart && today <= fiveMinsAfterEnd;
-    //  return true;
+    return today >= fiveMinsBeforeStart && today <= fiveMinsAfterEnd;
+    // return true;
   };
 
   // Handle joining a session
@@ -207,6 +216,10 @@ const StudentDashboard = () => {
                   {session.bookName}
                 </h3>
                 <div className="flex items-center text-sm text-gray-600 mt-1">
+                  <Calendar className="w-4 h-4 mr-1.5" />
+                  {session.dayName}
+                </div>
+                <div className="flex items-center text-sm text-gray-600 mt-1">
                   <Clock className="w-4 h-4 mr-1.5" />
                   {session.timeSlotDetails.startTime} -{" "}
                   {session.timeSlotDetails.endTime}
@@ -286,7 +299,7 @@ const StudentDashboard = () => {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-blue-100">
-                      Subjects
+                      Total Tutors
                     </p>
                     <p className="text-xl font-bold text-white">
                       {dashboardData.myTutors.length || 0}
@@ -738,7 +751,7 @@ const StudentDashboard = () => {
                           Total Spent
                         </span>
                         <span className="text-sm font-semibold text-blue-700">
-                          $
+                          Rs.
                           {dashboardData.analytics.totalSpent?.toFixed(2) ||
                             "0.00"}
                         </span>

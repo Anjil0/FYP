@@ -14,8 +14,10 @@ import {
 import { format } from "date-fns";
 import socket from "../socket";
 import { debounce } from "lodash";
+import { useSearchParams } from "react-router-dom";
 
 const TutorMessagePage = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [students, setStudents] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -65,7 +67,7 @@ const TutorMessagePage = () => {
                   : "text-indigo-100"
               }`}
             >
-              {format(new Date(message.createdAt), "HH:mm")}
+              {format(new Date(message.createdAt), "hh:mm a")}
               {message.senderId !== selectedStudent.studentId._id &&
                 (message.read ? (
                   <CheckCheck className="w-3.5 h-3.5" />
@@ -94,6 +96,7 @@ const TutorMessagePage = () => {
     scrollToBottom();
   }, [messages]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const debouncedTyping = useCallback(
     debounce(() => {
       socket.emit("stopTyping", { bookingId: activeBookingId });
@@ -162,6 +165,7 @@ const TutorMessagePage = () => {
     };
   }, [activeBookingId]);
 
+  // eslint-disable-next-line react/prop-types
   const StatusIndicator = ({ userId, size = "small" }) => {
     const isOnline = onlineUsers.has(userId);
     const sizeClasses = size === "small" ? "h-3 w-3" : "h-4 w-4";
@@ -169,7 +173,7 @@ const TutorMessagePage = () => {
     return (
       <div
         className={`absolute bottom-0 right-0 ${sizeClasses} rounded-full 
-          ${isOnline ? "bg-green-500" : "bg-gray-400"} 
+          ${isOnline ? "bg-green-500" : "bg-red-400"} 
           ring-2 ring-white transition-colors duration-300`}
         title={isOnline ? "Online" : "Offline"}
       />
@@ -227,11 +231,19 @@ const TutorMessagePage = () => {
         );
 
         if (response.data.IsSuccess) {
-          setStudents(
-            response.data.Result.bookings.filter(
-              (booking) => booking.status === "ongoing"
-            )
-          );
+          const activeBookings = response.data.Result.bookings;
+          setStudents(activeBookings);
+
+          const bookingId = searchParams.get("id");
+          if (bookingId) {
+            const selectedBooking = activeBookings.find(
+              (booking) => booking._id === bookingId
+            );
+            if (selectedBooking) {
+              setSelectedStudent(selectedBooking);
+              setActiveBookingId(bookingId);
+            }
+          }
         }
       } catch (error) {
         if (error.response && error.response.data) {
@@ -247,7 +259,7 @@ const TutorMessagePage = () => {
       }
     };
     fetchStudents();
-  }, []);
+  }, [searchParams]);
 
   const sendMessage = async (e) => {
     e.preventDefault();
@@ -389,6 +401,7 @@ const TutorMessagePage = () => {
                       onClick={() => {
                         setSelectedStudent(booking);
                         setActiveBookingId(booking._id);
+                        setSearchParams({ id: booking._id });
                       }}
                       className={`p-4 cursor-pointer transition-all hover:bg-gray-50
                         ${
@@ -438,7 +451,9 @@ const TutorMessagePage = () => {
                           className="h-12 w-12 rounded-full object-cover ring-2 ring-gray-100"
                           alt={selectedStudent.studentId?.username}
                         />
-                        <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 ring-2 ring-white" />
+                        <StatusIndicator
+                          userId={selectedStudent.studentId?._id}
+                        />
                       </div>
                       <div>
                         <h3 className="font-semibold text-gray-900 text-lg">

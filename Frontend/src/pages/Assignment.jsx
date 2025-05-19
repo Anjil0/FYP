@@ -19,7 +19,7 @@ import baseUrl from "../config/config";
 
 const AssignmentsDashboard = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("assigned");
+  const [activeTab, setActiveTab] = useState("all");
   const [assignments, setAssignments] = useState([]);
   const [filteredAssignments, setFilteredAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -55,6 +55,21 @@ const AssignmentsDashboard = () => {
   }, [activeTab, token]);
 
   const filterAssignmentsByStatus = (assignments, status) => {
+    if (status === "all") {
+      return assignments;
+    }
+    if (status === "in_progress") {
+      return assignments.filter(
+        (assignment) =>
+          assignment.status === "assigned" || assignment.status === "submitted"
+      );
+    }
+    if (status === "completed") {
+      return assignments.filter(
+        (assignment) =>
+          assignment.status === "completed" || assignment.status === "reviewed"
+      );
+    }
     return assignments.filter((assignment) => assignment.status === status);
   };
 
@@ -89,9 +104,14 @@ const AssignmentsDashboard = () => {
   };
 
   const getDaysRemaining = (dueDate, assignment) => {
-    if (assignment.status === "completed" || assignment.status === "reviewed") {
+    if (assignment.status === "completed") {
       return {
-        text: `Submitted`,
+        text: `Submitted, Yet to be reviewed`,
+        class: "text-indigo-600 font-medium",
+      };
+    } else if (assignment.status === "reviewed") {
+      return {
+        text: `Submitted and Reviewed`,
         class: "text-indigo-600 font-medium",
       };
     }
@@ -101,7 +121,6 @@ const AssignmentsDashboard = () => {
         class: "text-red-600 font-medium",
       };
     }
-    console.log(dueDate);
 
     return {
       text: `(Due on ${formatDate(dueDate)})`,
@@ -160,23 +179,23 @@ const AssignmentsDashboard = () => {
           <div className="flex">
             <button
               className={`py-4 px-6 text-sm font-medium transition-colors ${
-                activeTab === "assigned"
+                activeTab === "all"
                   ? "border-b-2 border-indigo-500 text-indigo-600 bg-white"
                   : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }`}
-              onClick={() => handleTabChange("assigned")}
+              onClick={() => handleTabChange("all")}
             >
-              Assigned
+              All
             </button>
             <button
               className={`py-4 px-6 text-sm font-medium transition-colors ${
-                activeTab === "submitted"
+                activeTab === "in_progress"
                   ? "border-b-2 border-indigo-500 text-indigo-600 bg-white"
                   : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }`}
-              onClick={() => handleTabChange("submitted")}
+              onClick={() => handleTabChange("in_progress")}
             >
-              Submitted
+              In Progress
             </button>
             <button
               className={`py-4 px-6 text-sm font-medium transition-colors ${
@@ -187,16 +206,6 @@ const AssignmentsDashboard = () => {
               onClick={() => handleTabChange("completed")}
             >
               Completed
-            </button>
-            <button
-              className={`py-4 px-6 text-sm font-medium transition-colors ${
-                activeTab === "reviewed"
-                  ? "border-b-2 border-indigo-500 text-indigo-600 bg-white"
-                  : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-              onClick={() => handleTabChange("reviewed")}
-            >
-              Reviewed
             </button>
             <button
               className={`py-4 px-6 text-sm font-medium transition-colors ${
@@ -252,7 +261,7 @@ const AssignmentsDashboard = () => {
                 No assignments found
               </h3>
               <p className="text-gray-500 mb-6">
-                {activeTab === "assigned"
+                {activeTab === "in_progress"
                   ? "You haven't assigned any assignments yet."
                   : "No assignments have been completed yet."}
               </p>
@@ -415,78 +424,76 @@ const AssignmentsDashboard = () => {
       )}
 
       {/* Quick Stats */}
-      {filteredAssignments.length > 0 && (
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-            <div className="flex items-center">
-              <div className="rounded-full p-2 bg-blue-100 mr-3">
-                <Clock className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Pending</p>
-                <p className="text-xl font-semibold">
-                  {
-                    assignments.filter(
-                      (a) => a.status === "assigned" || a.status === "submitted"
-                    ).length
-                  }
-                </p>
-              </div>
+      <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center">
+            <div className="rounded-full p-2 bg-blue-100 mr-3">
+              <Clock className="h-5 w-5 text-blue-600" />
             </div>
-          </div>
-
-          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-            <div className="flex items-center">
-              <div className="rounded-full p-2 bg-green-100 mr-3">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Completed</p>
-                <p className="text-xl font-semibold">
-                  {assignments.filter((a) => a.status === "completed").length}
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-            <div className="flex items-center">
-              <div className="rounded-full p-2 bg-green-100 mr-3">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Reviewed</p>
-                <p className="text-xl font-semibold">
-                  {assignments.filter((a) => a.status === "reviewed").length}
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-            <div className="flex items-center">
-              <div className="rounded-full p-2 bg-green-100 mr-3">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Not Submitted</p>
-                <p className="text-xl font-semibold">
-                  {assignments.filter((a) => a.status === "unsubmitted").length}
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-            <div className="flex items-center">
-              <div className="rounded-full p-2 bg-purple-100 mr-3">
-                <BookOpen className="h-5 w-5 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Total</p>
-                <p className="text-xl font-semibold">{assignments.length}</p>
-              </div>
+            <div>
+              <p className="text-sm text-gray-500">Pending</p>
+              <p className="text-xl font-semibold">
+                {
+                  assignments.filter(
+                    (a) => a.status === "assigned" || a.status === "submitted"
+                  ).length
+                }
+              </p>
             </div>
           </div>
         </div>
-      )}
+
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center">
+            <div className="rounded-full p-2 bg-green-100 mr-3">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Completed</p>
+              <p className="text-xl font-semibold">
+                {assignments.filter((a) => a.status === "completed").length}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center">
+            <div className="rounded-full p-2 bg-green-100 mr-3">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Reviewed</p>
+              <p className="text-xl font-semibold">
+                {assignments.filter((a) => a.status === "reviewed").length}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center">
+            <div className="rounded-full p-2 bg-green-100 mr-3">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Not Submitted</p>
+              <p className="text-xl font-semibold">
+                {assignments.filter((a) => a.status === "unsubmitted").length}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center">
+            <div className="rounded-full p-2 bg-purple-100 mr-3">
+              <BookOpen className="h-5 w-5 text-purple-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Total</p>
+              <p className="text-xl font-semibold">{assignments.length}</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

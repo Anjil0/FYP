@@ -10,7 +10,6 @@ import {
 import Layout from "./authUtils/Layout.jsx";
 import LandingPage from "./pages/Landing.jsx";
 import AboutUs from "./pages/About.jsx";
-// import TutorProfile from "./pages/Profile.jsx";
 import TutorBookingRequests from "./pages/TutorBookingReq.jsx";
 import AdminDashboard from "./pages/AdminDashboard.jsx";
 import Verification from "./components/verification.jsx";
@@ -44,6 +43,7 @@ import AnnouncementPage from "./pages/AdminAnnouncementPage.jsx";
 import ReportGeneration from "./pages/ReportGeneration.jsx";
 import RecommendedTutors from "./pages/RecommendedTutors.jsx";
 import TutorProfile from "./pages/TutorProfile.jsx";
+import TutorAnnouncementPage from "./pages/TutorAnnouncementPage.jsx";
 
 const App = () => {
   const registerSocket = () => {
@@ -220,6 +220,7 @@ const App = () => {
               </ProtectedRoute>
             }
           />
+          {/* Tutor Routess  */}
           <Route
             path="/tutorProfile"
             element={
@@ -277,6 +278,14 @@ const App = () => {
             }
           />
           <Route
+            path="/tutorAnnouncements"
+            element={
+              <ProtectedRoute allowedRoles={["tutor"]}>
+                <TutorAnnouncementPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/tutorChat"
             element={
               <ProtectedRoute allowedRoles={["tutor"]}>
@@ -293,6 +302,7 @@ const App = () => {
             }
           />
         </Route>
+        {/* Admin routes */}
         <Route
           path="/adminDashboard"
           element={

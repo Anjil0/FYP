@@ -1,3 +1,6 @@
+/* eslint-disable react/prop-types */
+"use client";
+
 import { useState, useEffect, useMemo } from "react";
 import {
   Search,
@@ -16,6 +19,8 @@ import {
   Clock,
   Heart,
   Share2,
+  Sparkles,
+  Award,
 } from "lucide-react";
 import axios from "axios";
 import baseUrl from "../config/config";
@@ -41,6 +46,7 @@ const TutorListing = () => {
   const [activeSort, setActiveSort] = useState("recommended");
   const [showFilters, setShowFilters] = useState(false);
   const [favorites, setFavorites] = useState([]);
+  const [showAllRecommendations, setShowAllRecommendations] = useState(false);
 
   // Fetch regular tutors
   useEffect(() => {
@@ -85,7 +91,11 @@ const TutorListing = () => {
             },
           }
         );
-        setRecommendedTutors(response.data);
+        // Filter out recommendations with score less than 0.05
+        const filteredRecommendations = response.data.filter(
+          (tutor) => tutor.recommendationScore >= 0.05
+        );
+        setRecommendedTutors(filteredRecommendations);
       } catch (error) {
         console.error("Error fetching recommendations:", error);
         // Silently fail for recommendations
@@ -133,6 +143,7 @@ const TutorListing = () => {
     if (experience === "1-2") return 1.5;
     if (experience === "2-5") return 3.5;
     if (experience === "5+") return 6;
+    if (experience === "fresher") return 0.5;
     return 0;
   };
 
@@ -224,6 +235,7 @@ const TutorListing = () => {
       "1-2": "1-2 Years Experience",
       "2-5": "2-5 Years Experience",
       "5+": "5+ Years Experience",
+      fresher: "New Tutor",
     };
     return experienceMap[experience] || experience;
   };
@@ -262,6 +274,11 @@ const TutorListing = () => {
         .catch(() => toast.error("Failed to copy link"));
     }
   };
+
+  // Get the number of recommendations to display
+  const displayedRecommendations = showAllRecommendations
+    ? recommendedTutors
+    : recommendedTutors.slice(0, 3);
 
   const TutorCard = ({ tutor }) => {
     const isFavorite = favorites.includes(tutor._id);
@@ -386,19 +403,30 @@ const TutorListing = () => {
 
   const RecommendedTutorCard = ({ tutor }) => {
     const isFavorite = favorites.includes(tutor.id);
+    const score = tutor.recommendationScore;
+
+    // Determine the color gradient based on score
+    const getScoreGradient = () => {
+      if (score >= 0.8) return "from-indigo-600 to-purple-600";
+      if (score >= 0.6) return "from-blue-500 to-indigo-600";
+      if (score >= 0.4) return "from-blue-400 to-indigo-500";
+      return "from-blue-300 to-indigo-400";
+    };
+
+    // Get badge for high match scores
+    const getMatchBadge = () => {
+      if (score >= 0.85) return "Perfect Match";
+      if (score >= 0.7) return "Great Match";
+      if (score >= 0.5) return "Good Match";
+      return null;
+    };
+
+    const matchBadge = getMatchBadge();
 
     return (
       <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 border-2 border-transparent hover:border-indigo-200">
         {/* Colored header based on recommendation score */}
-        <div
-          className={`h-3 ${
-            tutor.recommendationScore >= 0.8
-              ? "bg-gradient-to-r from-indigo-600 to-purple-600"
-              : tutor.recommendationScore >= 0.6
-              ? "bg-gradient-to-r from-blue-500 to-indigo-600"
-              : "bg-gradient-to-r from-blue-400 to-indigo-500"
-          }`}
-        ></div>
+        <div className={`h-3 bg-gradient-to-r ${getScoreGradient()}`}></div>
 
         <div className="p-5">
           {/* Tutor Header with Image and Basic Info */}
@@ -418,9 +446,17 @@ const TutorListing = () => {
             </div>
 
             <div className="flex-1">
-              <h3 className="text-xl font-semibold text-gray-800">
-                {tutor.username}
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-xl font-semibold text-gray-800">
+                  {tutor.username}
+                </h3>
+                {matchBadge && (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                    <Sparkles className="w-3 h-3 mr-1 text-indigo-500" />
+                    {matchBadge}
+                  </span>
+                )}
+              </div>
               <div className="flex items-center">
                 <div className="flex items-center">
                   <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
@@ -461,7 +497,7 @@ const TutorListing = () => {
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div
-                className="h-2 rounded-full bg-gradient-to-r from-indigo-500 to-blue-500"
+                className={`h-2 rounded-full bg-gradient-to-r ${getScoreGradient()}`}
                 style={{
                   width: `${Math.round(tutor.recommendationScore * 100)}%`,
                 }}
@@ -529,6 +565,13 @@ const TutorListing = () => {
               >
                 {tutor.teachingLocation === "online" ? "Online" : "In-Person"}
               </span>
+
+              {tutor.isAvailable && (
+                <span className="ml-2 px-2 py-1 text-xs rounded-full bg-emerald-100 text-emerald-800 flex items-center">
+                  <Clock className="w-3 h-3 mr-1" />
+                  Available
+                </span>
+              )}
             </div>
 
             <button
@@ -602,12 +645,13 @@ const TutorListing = () => {
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center">
                 <div className="w-1 h-6 bg-indigo-600 rounded-full mr-3"></div>
-                <h2 className="text-2xl font-bold text-gray-800">
+                <h2 className="text-2xl font-bold text-gray-800 flex items-center">
                   Recommended For You
+                  <Sparkles className="w-5 h-5 ml-2 text-amber-500" />
                 </h2>
               </div>
               <div className="text-sm text-gray-500 flex items-center">
-                <ThumbsUp className="w-4 h-4 mr-1 text-indigo-500" />
+                <Award className="w-4 h-4 mr-1 text-indigo-500" />
                 Personalized matches based on your preferences
               </div>
             </div>
@@ -620,7 +664,7 @@ const TutorListing = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {recommendedTutors.slice(0, 3).map((tutor) => (
+                {displayedRecommendations.map((tutor) => (
                   <RecommendedTutorCard key={tutor.id} tutor={tutor} />
                 ))}
               </div>
@@ -629,11 +673,19 @@ const TutorListing = () => {
             {recommendedTutors.length > 3 && (
               <div className="text-center mt-6">
                 <button
-                  onClick={() => navigate("/recommendations")}
+                  onClick={() =>
+                    setShowAllRecommendations(!showAllRecommendations)
+                  }
                   className="text-indigo-600 hover:text-indigo-800 font-semibold inline-flex items-center transition-colors"
                 >
-                  View all recommendations
-                  <ChevronRight className="w-4 h-4 ml-1" />
+                  {showAllRecommendations
+                    ? "Show fewer recommendations"
+                    : "View all recommendations"}
+                  <ChevronRight
+                    className={`w-4 h-4 ml-1 transition-transform ${
+                      showAllRecommendations ? "rotate-90" : ""
+                    }`}
+                  />
                 </button>
               </div>
             )}
@@ -768,6 +820,7 @@ const TutorListing = () => {
                   <option value="1-2">1-2 years</option>
                   <option value="2-5">2-5 years</option>
                   <option value="5+">5+ years</option>
+                  <option value="fresher">New Tutor</option>
                 </select>
               </div>
 
@@ -786,6 +839,9 @@ const TutorListing = () => {
                   <option value="12_pass">12th Pass</option>
                   <option value="bachelor_ongoing">
                     Bachelor&apos;s (Ongoing)
+                  </option>
+                  <option value="bachelor_running">
+                    Bachelor&apos;s (Running)
                   </option>
                   <option value="bachelor_complete">
                     Bachelor&apos;s (Complete)

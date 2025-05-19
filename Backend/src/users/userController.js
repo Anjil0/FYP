@@ -57,11 +57,28 @@ const registerUser = async (req, res, next) => {
     const error = createError(400, "Password must be strong!");
     return next(error);
   }
-  if (!Array.isArray(preferredSubjects) || preferredSubjects.length < 1) {
+
+  let normalizedPreferredSubjects = preferredSubjects;
+
+  if (!Array.isArray(normalizedPreferredSubjects)) {
+    if (
+      typeof normalizedPreferredSubjects === "string" &&
+      normalizedPreferredSubjects.trim() !== ""
+    ) {
+      normalizedPreferredSubjects = [normalizedPreferredSubjects];
+    } else {
+      return next(
+        createError(400, "At least one preferred subject is required.")
+      );
+    }
+  }
+
+  if (normalizedPreferredSubjects.length < 1) {
     return next(
       createError(400, "At least one preferred subject is required.")
     );
   }
+
   if (!phoneRegex.test(phoneNumber)) {
     const error = createError(
       400,
@@ -69,7 +86,9 @@ const registerUser = async (req, res, next) => {
     );
     return next(error);
   }
+
   try {
+    // Check for existing username or email in userModel
     const existingUsername = await userModel.findOne({ username });
     if (existingUsername) {
       const error = createError(400, "Username is already taken.");
@@ -79,6 +98,17 @@ const registerUser = async (req, res, next) => {
     const existingEmail = await userModel.findOne({ email });
     if (existingEmail) {
       const error = createError(400, "Email is already registered.");
+      return next(error);
+    }
+
+    const existingTutor = await tutorModel.findOne({
+      $or: [{ username }, { email }],
+    });
+    if (existingTutor) {
+      const error = createError(
+        400,
+        "The user is already registered as a tutor."
+      );
       return next(error);
     }
 
@@ -105,12 +135,13 @@ const registerUser = async (req, res, next) => {
       grade,
       phoneNumber,
       address,
-      preferredSubjects,
+      preferredSubjects: normalizedPreferredSubjects,
       verificationCode: verficationToken,
       verificationCodeExpiresAt,
       image: imageUrl,
     });
 
+    // Send verification email
     await sendVerificationMail(newUser.email, verficationToken);
 
     const userObj = newUser.toObject();
@@ -126,7 +157,7 @@ const registerUser = async (req, res, next) => {
     });
   } catch (error) {
     if (req.file) fs.unlinkSync(getFilePath(req.file.filename));
-    next(createError(500, `Server Error while creating new user.${error}`));
+    next(createError(500, `Server Error while creating new user. ${error}`));
   }
 };
 
@@ -263,7 +294,7 @@ const loginUser = async (req, res, next) => {
     }
 
     if (!account) {
-      return next(createError(400, "Account not found!"));
+      return next(createError(400, "Incorrect email or password!"));
     }
 
     const passMatch = await bcrypt.compare(password, account.password);
@@ -589,7 +620,22 @@ const updateUserDetails = async (req, res, next) => {
     );
   }
 
-  if (!Array.isArray(preferredSubjects) || preferredSubjects.length < 1) {
+  let normalizedPreferredSubjects = preferredSubjects;
+
+  if (!Array.isArray(normalizedPreferredSubjects)) {
+    if (
+      typeof normalizedPreferredSubjects === "string" &&
+      normalizedPreferredSubjects.trim() !== ""
+    ) {
+      normalizedPreferredSubjects = [normalizedPreferredSubjects];
+    } else {
+      return next(
+        createError(400, "At least one preferred subject is required.")
+      );
+    }
+  }
+
+  if (normalizedPreferredSubjects.length < 1) {
     return next(
       createError(400, "At least one preferred subject is required.")
     );
@@ -622,7 +668,7 @@ const updateUserDetails = async (req, res, next) => {
     user.grade = grade;
     user.phoneNumber = phoneNumber;
     user.address = address;
-    user.preferredSubjects = preferredSubjects;
+    user.preferredSubjects = normalizedPreferredSubjects;
     await user.save();
 
     res.status(200).json({
@@ -666,7 +712,7 @@ const getAdminDashboard = async (req, res, next) => {
     );
 
     // Stats counts
-    const totalUsers = await userModel.countDocuments();
+    const totalUsers = await userModel.countDocuments({ role: 'user' });
     const activeTutors = await tutorModel.countDocuments({
       isVerified: "verified",
     });
@@ -1186,7 +1232,7 @@ async function getRecentUsers(limit) {
     recentUsers.push({
       name: student.username,
       email: student.email,
-      role: "student",
+      role: student.role === "user" ? "student" : "admin",
       image: student.image,
       joined: formatDate(student.createdAt),
     });

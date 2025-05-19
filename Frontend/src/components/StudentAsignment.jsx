@@ -13,7 +13,10 @@ import baseUrl from "../config/config";
 import SubmitAssignment from "./SubmitAssignment";
 import { useNavigate, useLocation } from "react-router-dom";
 
+import { useLoading } from "../config/LoadingContext";
+
 const AssignmentsList = () => {
+  const { setLoading } = useLoading();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -21,7 +24,7 @@ const AssignmentsList = () => {
   const [closedAssignments, setClosedAssignments] = useState([]);
   const [openExpanded, setOpenExpanded] = useState(true);
   const [closedExpanded, setClosedExpanded] = useState(true);
-  const [loading, setLoading] = useState(true);
+  const [loading] = useState(false);
   const [tutors, setTutors] = useState([]);
   const [selectedTutor, setSelectedTutor] = useState(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -95,13 +98,19 @@ const AssignmentsList = () => {
           toast.success("Tutors loaded successfully");
           // Fetch assignments for the default tutor
           fetchAssignments(formattedTutors[0]._id);
-        } else {
-          toast.warning("No tutors found");
-          setLoading(false);
         }
       } catch (error) {
         console.error("Error fetching tutors:", error);
-        toast.error(`Failed to load tutors: ${error.message}`);
+
+        setLoading(false);
+        toast.error(
+          error.response?.data?.ErrorMessage[0].message +
+            ", Redirecting to find tutors" ||
+            `Failed to load tutors: ${error.message}`
+        );
+        setTimeout(() => {
+          navigate("/tutors");
+        },4000);
         setLoading(false);
       }
     };

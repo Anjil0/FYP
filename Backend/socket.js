@@ -3,6 +3,7 @@
 const socketIo = require("socket.io");
 const UserModel = require("./src/users/userModel");
 const TutorModel = require("./src/tutors/tutorModel");
+const BookingModel = require("./src/booking/bookingModel");
 const Notification = require("./src/notification/notificationModel");
 
 /**
@@ -90,11 +91,9 @@ module.exports = (server) => {
 
       console.log(`User ${userId} attempting to join room ${roomId}`);
 
-      // Check room capacity
       if (roomMap.has(roomId)) {
         const existingUsers = roomMap.get(roomId);
 
-        // Reject if room is full (max 2) and user is not already in the room
         if (existingUsers.size >= 2 && !existingUsers.has(userId)) {
           console.log(
             `Rejecting ${userId}, room ${roomId} is full with users: ${Array.from(
@@ -378,6 +377,33 @@ module.exports = (server) => {
       }
     });
 
+    // Handle sending tutor announcement
+    socket.on("send_tutor_announcement", async (data) => {
+      const { title, content, selectedStudents } = data;
+      let userIdsToNotify = [];
+
+      try {
+        // Validate and process the selected students
+        userIdsToNotify = Array.from(new Set(selectedStudents));
+
+        // Send the announcement to selected students
+        userIdsToNotify.forEach((userId) => {
+          const socketIds = userSocketMap.get(userId);
+
+          if (socketIds && socketIds.size > 0) {
+            socketIds.forEach((socketId) => {
+              io.to(socketId).emit("receive_announcements", { title, content });
+            });
+          }
+        });
+
+        // Send notifications to the selected students
+        await sendTutorNotification(userIdsToNotify, content);
+      } catch (err) {
+        console.error("Error processing tutor announcement:", err);
+      }
+    });
+
     // Disconnection handler
     socket.on("disconnect", () => {
       handlers.handleDisconnect(socket, currentUserId);
@@ -401,6 +427,26 @@ module.exports = (server) => {
   }, 60000);
 
   return { io, userSocketMap, userStatusMap };
+};
+
+const sendTutorNotification = async (studentIds, message) => {
+  try {
+    // Fetch student details based on studentIds
+    const students = await UserModel.find({ _id: { $in: studentIds } });
+
+    // Prepare notification data
+    const notifications = students.map((student) => ({
+      recipient: student._id,
+      recipientModel: "User",
+      type: "other",
+      message: " (Tutor) " + message,
+    }));
+
+    // Store notifications in the database
+    await Notification.insertMany(notifications);
+  } catch (error) {
+    console.error("Error sending tutor notification:", error);
+  }
 };
 
 const sendNotification = async (target, message) => {
@@ -436,7 +482,7 @@ const sendNotification = async (target, message) => {
       recipient: recipient._id,
       recipientModel: recipient.role === "tutor" ? "Tutor" : "User",
       type: "other",
-      message: message,
+      message: "Announcement from Admin: " + message,
     }));
 
     await Notification.insertMany(notifications);

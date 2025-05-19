@@ -2,13 +2,14 @@ const Assignment = require("./assignmentsModel");
 const Booking = require("../booking/bookingModel");
 const createError = require("http-errors");
 const cloudinary = require("../config/coludinary");
-
+const Notification = require("../notification/notificationModel");
+const tutorModel = require("../tutors/tutorModel");
 const {
   uploadToCloudinary,
   getFilePath,
   extractPublicId,
 } = require("../utils/fileUpload");
-const { assign } = require("nodemailer/lib/shared");
+
 
 // Create a new assignment (tutor only)
 const createAssignment = async (req, res, next) => {
@@ -121,8 +122,31 @@ const createAssignment = async (req, res, next) => {
 
     await newAssignment.save();
 
-    res.status(201).json({
-      StatusCode: 201,
+    const tutor = await tutorModel.findById(booking.tutorId);
+
+    // Create notification for student
+    const notification = new Notification({
+      recipient: booking.studentId,
+      recipientModel: "User",
+      type: "assignment",
+      message: `New assignment has been assigned by ${tutor.username} !`,
+      typeId: newAssignment._id,
+    });
+
+    await notification.save();
+    // Send real-time notification
+    const io = req.app.get("io");
+    const userSocketMap = req.app.get("userSocketMap");
+    const studentIDString = booking.studentId.toString();
+
+    if (userSocketMap.has(studentIDString)) {
+      const studentSocketIDs = userSocketMap.get(studentIDString);
+      studentSocketIDs.forEach((socketId) => {
+        io.to(socketId).emit("newNotification", notification);
+      });
+    }
+    res.status(200).json({
+      StatusCode: 200,
       IsSuccess: true,
       ErrorMessage: [],
       Result: newAssignment,
@@ -573,12 +597,6 @@ const provideFeedback = async (req, res, next) => {
     if (!assignment) {
       return next(
         createError(404, "Assignment not found or you don't have permission")
-      );
-    }
-
-    if (assignment.status !== "submitted") {
-      return next(
-        createError(400, "Feedback is allowed only after the due date.")
       );
     }
 

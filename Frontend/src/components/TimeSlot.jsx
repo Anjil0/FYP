@@ -118,16 +118,21 @@ const TimeSlotModal = ({ isOpen, onClose, editingSlot = null }) => {
       return;
     }
 
+    const currentStart = timeToMinutes(currentTimeSlot.startTime);
+    const currentEnd = timeToMinutes(currentTimeSlot.endTime);
+
+    // Check for any kind of overlap with existing slots
     const isOverlapping = formData.timeSlots.some((slot) => {
-      const currentStart = timeToMinutes(currentTimeSlot.startTime);
-      const currentEnd = timeToMinutes(currentTimeSlot.endTime);
       const slotStart = timeToMinutes(slot.startTime);
       const slotEnd = timeToMinutes(slot.endTime);
-      return currentStart < slotEnd && currentEnd > slotStart;
+      
+      // Check if either the start or end time falls within an existing slot
+      // or if the new slot completely encompasses an existing slot
+      return (currentStart <= slotEnd && currentEnd >= slotStart);
     });
 
     if (isOverlapping) {
-      toast.error("Time slots cannot overlap");
+      toast.error("Time slots cannot overlap, including partial overlaps");
       return;
     }
 
@@ -234,8 +239,56 @@ const TimeSlotModal = ({ isOpen, onClose, editingSlot = null }) => {
       toast.error("Please fix the errors before submitting");
       return;
     }
+
     try {
       const token = localStorage.getItem("accessToken");
+
+      // First, fetch all existing time slots
+      const allTimeSlotsResponse = await axios.get(
+        `${baseUrl}/api/timeslots/getAllTimeSlots`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (allTimeSlotsResponse.data.IsSuccess) {
+        const existingTimeSlots = allTimeSlotsResponse.data.Result.timeSlots;
+
+        // Skip checking the current slot if editing
+        const slotsToCheck = editingSlot
+          ? existingTimeSlots.filter((slot) => slot._id !== editingSlot._id)
+          : existingTimeSlots;
+
+        // Check for overlaps with existing slots
+        for (const existingSlot of slotsToCheck) {
+          // Check if days overlap
+          const hasOverlappingDays = formData.daysOfWeek.some((day) =>
+            existingSlot.daysOfWeek.includes(day)
+          );
+
+          if (hasOverlappingDays) {
+            // Check if time slots overlap
+            for (const newSlot of formData.timeSlots) {
+              for (const existingTime of existingSlot.timeSlots) {
+                const newStart = timeToMinutes(newSlot.startTime);
+                const newEnd = timeToMinutes(newSlot.endTime);
+                const existingStart = timeToMinutes(existingTime.startTime);
+                const existingEnd = timeToMinutes(existingTime.endTime);
+
+                // Check for any kind of overlap
+                if (newStart <= existingEnd && newEnd >= existingStart) {
+                  toast.error(
+                    `Time slot ${newSlot.startTime} - ${newSlot.endTime} overlaps with an existing slot (${existingTime.startTime} - ${existingTime.endTime}) on ${formData.daysOfWeek.join(", ")}`
+                  );
+                  return;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // If no overlaps found, proceed with creating/updating the time slot
       const url = editingSlot
         ? `${baseUrl}/api/timeslots/updateTimeSlot/${editingSlot._id}`
         : `${baseUrl}/api/timeslots/createTimeSlot`;

@@ -37,7 +37,6 @@ const SignupPage = () => {
     image: null,
   });
 
-  // Common subjects for quick selection
   const commonSubjects = [
     "Mathematics", 
     "Physics", 

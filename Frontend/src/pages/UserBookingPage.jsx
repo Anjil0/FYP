@@ -402,7 +402,7 @@ const UserBookingsPage = () => {
             </p>
             <div className="mt-6">
               <a
-                href="/find-tutors"
+                href="/tutors"
                 className="inline-flex items-center text-blue-600 hover:text-blue-800"
               >
                 Find a tutor
@@ -504,38 +504,40 @@ const UserBookingsPage = () => {
                   </div>
 
                   {/* Schedule */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2 bg-gray-50 p-3 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <ClockIcon className="w-4 h-4 text-blue-500" />
-                        <span className="text-sm text-gray-600 font-medium">
-                          Time
-                        </span>
-                      </div>
-                      <p className="text-sm">
-                        {booking.timeSlot?.startTime} -{" "}
-                        {booking.timeSlot?.endTime}
-                      </p>
-                    </div>
-                    <div className="space-y-2 bg-gray-50 p-3 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <CalendarIcon className="w-4 h-4 text-blue-500" />
-                        <span className="text-sm text-gray-600 font-medium">
-                          Days
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap gap-1">
-                        {booking.timeSlot?.days.map((day) => (
-                          <span
-                            key={day}
-                            className="px-2 py-0.5 bg-white rounded text-xs font-medium text-gray-600 border border-gray-100"
-                          >
-                            {day.slice(0, 3)}
+                  {booking.status !== 'cancelled' && booking.status !== 'completed' && booking.status !== 'rated' && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2 bg-gray-50 p-3 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <ClockIcon className="w-4 h-4 text-blue-500" />
+                          <span className="text-sm text-gray-600 font-medium">
+                            Time
                           </span>
-                        ))}
+                        </div>
+                        <p className="text-sm">
+                          {booking.timeSlot?.startTime} -{" "}
+                          {booking.timeSlot?.endTime}
+                        </p>
+                      </div>
+                      <div className="space-y-2 bg-gray-50 p-3 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <CalendarIcon className="w-4 h-4 text-blue-500" />
+                          <span className="text-sm text-gray-600 font-medium">
+                            Days
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {booking.timeSlot?.days.map((day) => (
+                            <span
+                              key={day}
+                              className="px-2 py-0.5 bg-white rounded text-xs font-medium text-gray-600 border border-gray-100"
+                            >
+                              {day.slice(0, 3)}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Duration & Payment */}
                   <div className="border-t pt-4 mt-4">
@@ -660,7 +662,7 @@ const UserBookingsPage = () => {
 
                             {booking.review ? (
                               <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded border border-gray-100 italic">
-                                "{booking.review}"
+                                &quot;{booking.review}&quot;
                               </div>
                             ) : (
                               <div className="text-xs text-gray-500 italic text-center py-1">

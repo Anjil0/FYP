@@ -179,6 +179,9 @@ const Navbar = () => {
       case "payment":
         path = "/earnings";
         break;
+      case "assignment":
+        path = userRole === "tutor" ? "/tutorAssignment" : "/stdAssignments";
+        break;
       default:
         return;
     }
@@ -342,6 +345,7 @@ const Navbar = () => {
         { href: "/tutorChat", text: "Message" },
         { href: "/tutorTimeSlot", text: "TimeSlots" },
         { href: "/tutorAssignment", text: "Assignments" },
+        { href: "/tutorAnnouncements", text: "Announcements" },
       ];
     }
     return [

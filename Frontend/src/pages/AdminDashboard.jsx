@@ -5,12 +5,10 @@ import {
   Book,
   DollarSign,
   Bell,
-  Search,
   ChevronUp,
   ChevronDown,
   Shield,
   Calendar,
-  ArrowUpRight,
   TrendingUp,
   Star,
   Clock,
@@ -112,7 +110,7 @@ const AdminDashboard = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 {[
                   {
-                    title: "Total Users",
+                    title: "Total Students",
                     value: dashboardData.stats.totalUsers.toLocaleString(),
                     change: dashboardData.stats.userGrowthRate + "%",
                     icon: <Users className="h-6 w-6 text-white" />,
@@ -450,7 +448,7 @@ const AdminDashboard = () => {
               </div>
 
               {/* Recent Activities and Users */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 {/* Recent Activities */}
                 <div className="bg-white rounded-xl shadow-lg p-6">
                   <div className="flex items-center justify-between mb-6">
@@ -531,7 +529,7 @@ const AdminDashboard = () => {
                             {activity.time}
                           </div>
                           <div
-                            className={`text-xs px-2 py-1 rounded-full ${
+                            className={`mt-1 text-sm pr-4 py-1 rounded-full ${
                               activity.status === "completed"
                                 ? "bg-green-100 text-green-600"
                                 : activity.status === "pending"
@@ -539,7 +537,8 @@ const AdminDashboard = () => {
                                 : "bg-red-100 text-red-600"
                             }`}
                           >
-                            {activity.status}
+                            {activity.status.charAt(0).toUpperCase() +
+                              activity.status.slice(1)}
                           </div>
                         </div>
                       </div>
@@ -584,13 +583,19 @@ const AdminDashboard = () => {
                             </div>
                             <span
                               className={`px-2 py-0.5 rounded-full text-xs
-                              ${
-                                user.role === "tutor"
-                                  ? "bg-blue-100 text-blue-600"
-                                  : "bg-green-100 text-green-600"
-                              }`}
+                                ${
+                                  user.role === "tutor"
+                                    ? "bg-blue-100 text-blue-600"
+                                    : user.role === "admin"
+                                    ? "bg-red-100 text-red-600"
+                                    : "bg-green-100 text-green-600"
+                                }`}
                             >
-                              {user.role === "tutor" ? "Tutor" : "Student"}
+                              {user.role === "tutor"
+                                ? "Tutor"
+                                : user.role === "admin"
+                                ? "Admin"
+                                : "Student"}
                             </span>
                           </div>
                         </div>

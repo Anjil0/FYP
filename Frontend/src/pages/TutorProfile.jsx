@@ -33,6 +33,10 @@ const TutorProfile = () => {
 
   const token = localStorage.getItem("accessToken");
 
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   // Fetch tutor profile data
   useEffect(() => {
     const fetchTutorProfile = async () => {

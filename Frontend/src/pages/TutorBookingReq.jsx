@@ -17,15 +17,15 @@ import {
   Shield,
   CalendarIcon,
   ClockIcon,
-  MapPin,
   ThumbsUp,
   MessageCircle,
 } from "lucide-react";
-import { format } from "date-fns";
+import { useLoading } from "../config/LoadingContext";
 
 const TutorBookingsPage = () => {
+  const { setLoading } = useLoading();
   const [bookings, setBookings] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading] = useState(false);
   const [filter, setFilter] = useState("all");
   const filterTabs = [
     "all",
@@ -124,6 +124,8 @@ const TutorBookingsPage = () => {
 
     try {
       setCancelling(true);
+      setLoading(true);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       const token = localStorage.getItem("accessToken");
       const response = await axios.put(
         `${baseUrl}/api/bookings/cancel/${selectedBooking._id}`,
@@ -146,13 +148,17 @@ const TutorBookingsPage = () => {
           "Failed to cancel booking"
       );
     } finally {
+      setLoading(false);
       setCancelling(false);
     }
   };
 
   const handleConfirmBooking = async (bookingId) => {
     try {
+      setLoading(true);
+
       const token = localStorage.getItem("accessToken");
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       const response = await axios.put(
         `${baseUrl}/api/bookings/confirm/${bookingId}`,
         {},
@@ -170,6 +176,8 @@ const TutorBookingsPage = () => {
         error.response?.data?.ErrorMessage?.[0]?.message ||
           "Failed to confirm booking"
       );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -267,11 +275,6 @@ const TutorBookingsPage = () => {
       default:
         return null;
     }
-  };
-
-  const openRatingDetails = (booking) => {
-    setSelectedRating(booking);
-    setShowRatingDetails(true);
   };
 
   const closeRatingDetails = () => {
@@ -476,143 +479,80 @@ const TutorBookingsPage = () => {
                   </div>
 
                   {/* Schedule */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2 bg-gray-50 p-3 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <ClockIcon className="w-4 h-4 text-blue-500" />
-                        <span className="text-sm text-gray-600 font-medium">
-                          Time
-                        </span>
-                      </div>
-                      <p className="text-sm">
-                        {booking.timeSlot?.startTime} -{" "}
-                        {booking.timeSlot?.endTime}
-                      </p>
-                    </div>
-                    <div className="space-y-2 bg-gray-50 p-3 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <CalendarIcon className="w-4 h-4 text-blue-500" />
-                        <span className="text-sm text-gray-600 font-medium">
-                          Days
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap gap-1">
-                        {booking.timeSlot?.days.map((day) => (
-                          <span
-                            key={day}
-                            className="px-2 py-0.5 bg-white rounded text-xs font-medium text-gray-600 border border-gray-100"
-                          >
-                            {day.slice(0, 3)}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Duration & Payment */}
-                  <div className="border-t pt-4 mt-4">
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-2 bg-green-50 px-3 py-1 rounded-lg">
-                        <DollarSign className="w-4 h-4 text-green-600" />
-                        <span className="text-sm font-medium text-green-700">
-                          Rs. {booking.totalAmount}
-                        </span>
-                      </div>
-                      <span className="text-sm font-medium text-gray-900 bg-blue-50 px-3 py-1 rounded-lg">
-                        {booking.duration}{" "}
-                        {booking.duration === 1 ? "month" : "months"}
-                      </span>
-                    </div>
-                    <div className="mt-2 text-xs text-gray-500 flex items-center justify-center gap-2 bg-gray-50 p-2 rounded-lg">
-                      <Calendar className="w-3 h-3" />
-                      {format(
-                        new Date(booking.startDate),
-                        "MMM d, yyyy"
-                      )} - {format(new Date(booking.endDate), "MMM d, yyyy")}
-                    </div>
-                  </div>
-
-                  {/* Payment Status for Physical Classes */}
-                  {booking.teachingMode === "physical" && (
-                    <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
-                      <MapPin className="w-4 h-4 text-gray-500" />
-                      <div>
-                        <p className="text-sm font-medium">In-person Session</p>
-                        <div className="flex items-center mt-1">
-                          <span
-                            className={`px-2 py-0.5 text-xs rounded-full ${
-                              booking.paymentStatus === "completed"
-                                ? "bg-green-100 text-green-800"
-                                : "bg-yellow-100 text-yellow-800"
-                            }`}
-                          >
-                            Payment: {booking.paymentStatus}
-                          </span>
+                  {booking.status !== "cancelled" &&
+                    booking.status !== "completed" &&
+                    booking.status !== "rated" && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2 bg-gray-50 p-3 rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <ClockIcon className="w-4 h-4 text-blue-500" />
+                            <span className="text-sm text-gray-600 font-medium">
+                              Time
+                            </span>
+                          </div>
+                          <p className="text-sm">
+                            {booking.timeSlot?.startTime} -{" "}
+                            {booking.timeSlot?.endTime}
+                          </p>
                         </div>
-                      </div>
-                    </div>
-                  )}
+                        <div className="space-y-2 bg-gray-50 p-3 rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <CalendarIcon className="w-4 h-4 text-blue-500" />
+                            <span className="text-sm text-gray-600 font-medium">
+                              Days
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {booking.timeSlot?.days.map((day) => (
+                              <span
+                                key={day}
+                                className="px-2 py-0.5 bg-white rounded text-xs font-medium text-gray-600 border border-gray-100"
+                              >
+                                {day.slice(0, 3)}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
 
-                  {/* Action Buttons */}
-                  <div className="flex gap-3 pt-4">
-                    {/* Pending Booking Actions */}
-                    {(booking.status === "pending" ||
-                      booking.status === "paymentPending") && (
-                      <>
                         {booking.status === "pending" && (
-                          <button
-                            onClick={() => handleConfirmBooking(booking._id)}
-                            className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2"
-                          >
-                            <CheckCircle className="w-4 h-4" />
-                            Confirm
-                          </button>
+                          <>
+                            <button
+                              onClick={() => handleConfirmBooking(booking._id)}
+                              className="w-full bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600 transition-colors duration-200"
+                            >
+                              Confirm Booking
+                            </button>
+                            <button
+                              onClick={() => {
+                                setShowCancelModal(true);
+                                setSelectedBooking(booking);
+                              }}
+                              className="w-full bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 transition-colors duration-200"
+                            >
+                              Cancel Booking
+                            </button>
+                          </>
                         )}
-                        <button
-                          onClick={() => {
-                            setSelectedBooking(booking);
-                            setShowCancelModal(true);
-                          }}
-                          className="flex-1 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2"
-                        >
-                          <X className="w-4 h-4" />
-                          Cancel
-                        </button>
-                      </>
-                    )}
 
-                    {/* Ongoing Booking Actions */}
-                    {booking.status === "ongoing" && (
-                      <>
-                        {booking.teachingMode === "physical" &&
-                          booking.paymentStatus === "pending" && (
+                        {booking?.teachingMode === "physical" &&
+                          booking?.status === "ongoing" &&
+                          booking?.paymentStatus !== "completed" && (
                             <button
                               onClick={() =>
                                 handleUpdatePaymentStatus(
-                                  booking._id,
+                                  booking?._id,
                                   "completed"
                                 )
                               }
-                              className="flex-1 px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2"
+                              className="col-span-2 flex items-center justify-center w-full gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-lg
+                              hover:bg-green-200 transition-colors duration-200"
                             >
                               <DollarSign className="w-4 h-4" />
                               Mark as Paid
                             </button>
                           )}
-                      </>
+                      </div>
                     )}
-
-                    {/* View Rating Button */}
-                    {booking.isRated && (
-                      <button
-                        onClick={() => openRatingDetails(booking)}
-                        className="flex-1 px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2"
-                      >
-                        <Star className="w-4 h-4" />
-                        View Rating
-                      </button>
-                    )}
-                  </div>
                 </div>
               </div>
             ))}

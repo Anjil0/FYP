@@ -1,3 +1,5 @@
+/* eslint-disable no-unused-vars */
+/* eslint-disable react/prop-types */
 import { useState, useEffect, useRef } from "react";
 import {
   X,
@@ -11,8 +13,10 @@ import {
 import { toast, Toaster } from "sonner";
 import axios from "axios";
 import baseUrl from "../config/config";
+import { useLoading } from "../config/LoadingContext";
 
 const SubmitAssignment = ({ assignmentId, onClose }) => {
+  const { setLoading } = useLoading();
   const [remarks, setRemarks] = useState("");
   const [attachments, setAttachments] = useState([]);
   const [existingAttachments, setExistingAttachments] = useState([]);
@@ -195,7 +199,7 @@ const SubmitAssignment = ({ assignmentId, onClose }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    setLoading(true);
     // If resubmitting without any changes
     if (
       isAlreadySubmitted &&
@@ -227,7 +231,7 @@ const SubmitAssignment = ({ assignmentId, onClose }) => {
       attachments.forEach((attachment) => {
         formData.append("files", attachment.file);
       });
-
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       // Send submission to server
       const response = await axios.post(
         `${baseUrl}/api/assignments/submitAssignment/${assignmentId}`,
@@ -260,6 +264,7 @@ const SubmitAssignment = ({ assignmentId, onClose }) => {
       const errorMessage = error.response?.data?.ErrorMessage || error.message;
       toast.error(`Failed to submit assignment: ${errorMessage}`);
     } finally {
+      setLoading(false);
       setIsSubmitting(false);
     }
   };

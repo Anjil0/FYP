@@ -4,7 +4,6 @@ const Tutor = require("../tutors/tutorModel");
 const Rating = require("../ratings/ratingModel");
 const Booking = require("../booking/bookingModel");
 const TimeSlot = require("../timeSlots/timeSlotModel");
-const mongoose = require("mongoose");
 
 const getRecommendedTutors = async (req, res) => {
   try {
@@ -84,6 +83,21 @@ const getRecommendedTutors = async (req, res) => {
           });
         }
 
+        // Get recent activity data for freshness score
+        const recentBookings = await Booking.countDocuments({
+          tutorId: tutor._id,
+          createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }, // Last 30 days
+        });
+
+        // Get completion rate
+        const completedBookings = await Booking.countDocuments({
+          tutorId: tutor._id,
+          status: { $in: ["completed", "rated"] },
+        });
+
+        const completionRate =
+          bookingsCount > 0 ? completedBookings / bookingsCount : 0;
+
         return {
           id: tutor._id.toString(),
           username: tutor.username,
@@ -98,6 +112,9 @@ const getRecommendedTutors = async (req, res) => {
           description: tutor.description,
           teachingLocation: tutor.teachingLocation,
           image: tutor.image || null,
+          isAvailable: tutor.isAvailable || false,
+          recentActivity: recentBookings,
+          completionRate: completionRate,
         };
       })
     );
@@ -113,7 +130,24 @@ const getRecommendedTutors = async (req, res) => {
       preferredSubjects: user.preferredSubjects || [],
       address: user.address || "",
       grade: user.grade || "",
+      previousBookings: [], // We'll populate this below
     };
+
+    // Get user's previous bookings to enhance recommendations
+    const userBookings = await Booking.find({ userId: user._id })
+      .populate("tutorId")
+      .sort({ createdAt: -1 })
+      .limit(10);
+
+    // Extract tutor IDs and subjects from previous bookings
+    if (userBookings && userBookings.length > 0) {
+      userData.previousBookings = userBookings.map((booking) => ({
+        tutorId: booking.tutorId?._id?.toString(),
+        subject: booking.subject,
+        rating: booking.rating,
+        createdAt: booking.createdAt,
+      }));
+    }
 
     try {
       // Make request to recommendation service
@@ -121,8 +155,6 @@ const getRecommendedTutors = async (req, res) => {
         user: userData,
         tutors: tutorsWithDetails,
       });
-
-      console.log(response.data);
 
       // Create a Map for quick lookup of original tutor details by ID
       const tutorsMap = new Map(
@@ -133,8 +165,8 @@ const getRecommendedTutors = async (req, res) => {
       // Enhance recommended tutors with additional frontend-friendly information
       const enhancedRecommendations = response.data
         .filter((recommendation) => {
-          // Filter out tutors with combined_score that would round to 0.00 in .2f format
-          return recommendation.combined_score >= 0.005; // This will ensure scores below 0.005 (which round to 0.00) are filtered out
+          // Filter out tutors with combined_score less than 0.15
+          return recommendation.combined_score >= 0.15;
         })
         .map((recommendation) => {
           const tutorId = recommendation.id;
@@ -146,6 +178,11 @@ const getRecommendedTutors = async (req, res) => {
 
           // Calculate recommendation reasons
           const recommendationReasons = [];
+
+          // Add availability reason if tutor is available
+          if (originalTutor.isAvailable) {
+            recommendationReasons.push("Available now for tutoring");
+          }
 
           // Add subject match reason if available
           if (
@@ -208,6 +245,15 @@ const getRecommendedTutors = async (req, res) => {
             );
           }
 
+          // Add previous booking reason if user has booked this tutor before
+          const previousBookingsWithTutor = userData.previousBookings.filter(
+            (booking) => booking.tutorId === tutorId
+          );
+
+          if (previousBookingsWithTutor.length > 0) {
+            recommendationReasons.push("You've worked with this tutor before");
+          }
+
           // If no specific reasons, add a generic one
           if (recommendationReasons.length === 0) {
             recommendationReasons.push("Recommended based on your preferences");
@@ -255,12 +301,29 @@ const getRecommendedTutors = async (req, res) => {
                 : 0;
           }
 
-          // Final score combines rating and subject match
+          // Calculate availability bonus
+          const availabilityBonus = tutor.isAvailable ? 0.3 : 0;
+
+          // Calculate grade match score
+          const gradeMatchScore =
+            userData.grade && tutor.gradeLevels.includes(userData.grade)
+              ? 0.2
+              : 0;
+
+          // Final score combines rating, subject match, availability and grade match
           const combinedScore =
-            parseFloat(tutor.rating) * 0.7 + subjectMatchScore * 0.3 * 5;
+            parseFloat(tutor.rating) * 0.4 +
+            subjectMatchScore * 0.2 * 5 +
+            availabilityBonus +
+            gradeMatchScore;
 
           // Generate recommendation reasons for fallback method
           const recommendationReasons = [];
+
+          // Availability reason
+          if (tutor.isAvailable) {
+            recommendationReasons.push("Available now for tutoring");
+          }
 
           // Subject match reason
           if (subjectMatchScore > 0 && userData.preferredSubjects.length > 0) {
@@ -322,6 +385,7 @@ const getRecommendedTutors = async (req, res) => {
             recommendationReasons: recommendationReasons.slice(0, 3),
           };
         })
+        .filter((tutor) => tutor.recommendationScore >= 0.25)
         .sort((a, b) => b.recommendationScore - a.recommendationScore)
         .slice(0, 5);
 

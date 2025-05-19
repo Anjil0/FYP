@@ -754,13 +754,13 @@ const AboutUs = () => {
                   href="/signup"
                   className="bg-white text-blue-700 px-8 py-4 rounded-full font-bold hover:bg-blue-50  inline-block text-center shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
                 >
-                  Get Started
+                  Get Started as a Student
                 </a>
                 <a
-                  href="/learn-more"
+                  href="/tutorSignup"
                   className="bg-white/10 backdrop-blur-sm border border-white/20 px-8 py-4 rounded-full font-bold hover:bg-white/20 transition-colors inline-block text-center"
                 >
-                  Learn More
+                  Get Started as a Tutor
                 </a>
               </div>
             </div>

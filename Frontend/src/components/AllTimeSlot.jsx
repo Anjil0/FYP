@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { toast, Toaster } from "sonner";
@@ -141,7 +143,7 @@ const AllTimeSlots = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Header */}
-      <Toaster richColors />  
+      <Toaster richColors />
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-2xl font-bold text-gray-800">Time Slots</h1>
         <button
@@ -190,8 +192,8 @@ const AllTimeSlots = () => {
             {Array.from(availableFilters.gradeLevels)
               .sort((a, b) => {
                 // Custom sort for grade levels
-                const gradeA = parseInt(a.match(/\d+/) || 0);
-                const gradeB = parseInt(b.match(/\d+/) || 0);
+                const gradeA = Number.parseInt(a.match(/\d+/) || 0);
+                const gradeB = Number.parseInt(b.match(/\d+/) || 0);
                 if (gradeA && gradeB) return gradeA - gradeB;
                 return a.localeCompare(b);
               })
@@ -299,19 +301,24 @@ const AllTimeSlots = () => {
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-gray-600">
                 <Clock className="w-5 h-5" />
-                <div className="space-y-1">
+                <div className="space-y-1 w-full">
                   {slot.timeSlots.map((time, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <span className="text-sm">
+                    <div
+                      key={index}
+                      className={`flex items-center justify-between p-1.5 rounded-md ${
+                        time.isBooked ? "bg-green-50" : "bg-blue-50"
+                      }`}
+                    >
+                      <span className="text-sm font-medium">
                         {time.startTime} - {time.endTime}
                       </span>
                       {time.isBooked ? (
-                        <span className="inline-flex items-center px-2 py-1 bg-green-50 text-green-700 text-xs rounded-full">
+                        <span className="inline-flex items-center px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">
                           <UserCheck className="w-3 h-3 mr-1" />
                           Booked
                         </span>
                       ) : (
-                        <span className="inline-flex items-center px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full">
+                        <span className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
                           Available
                         </span>
                       )}
@@ -325,14 +332,19 @@ const AllTimeSlots = () => {
             <div className="flex items-center gap-2 text-gray-600">
               <Calendar className="w-5 h-5" />
               <div className="flex flex-wrap gap-1">
-                {slot.daysOfWeek.map((day) => (
-                  <span
-                    key={day}
-                    className="px-2 py-1 bg-blue-50 text-blue-600 rounded-full text-sm"
-                  >
-                    {day}
-                  </span>
-                ))}
+                {slot.daysOfWeek.map((day) => {
+                  // Get first 3 letters of day
+                  const shortDay = day.substring(0, 3);
+                  return (
+                    <span
+                      key={day}
+                      className="px-2 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-medium"
+                      title={day}
+                    >
+                      {shortDay}
+                    </span>
+                  );
+                })}
               </div>
             </div>
 

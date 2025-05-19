@@ -3,14 +3,12 @@ const bookingRouter = express.Router();
 const {
   createBooking,
   tutorConfirmBooking,
-  getStudentChatBookings,
   getTutorChatBookings,
   updatePhysicalPaymentStatus,
   getStudentBookings,
   getAllTutors,
   getTutorBookings,
   getAllTutorinChat,
-  getAllStudentinChat,
   cancelBooking,
 } = require("./bookingController");
 
@@ -54,13 +52,6 @@ bookingRouter.get(
 bookingRouter.get("/getAllTutors/", authenticateToken, isUser, getAllTutors);
 
 bookingRouter.get(
-  "/getStudentChatBookings",
-  authenticateToken,
-  isUser,
-  getStudentChatBookings
-);
-
-bookingRouter.get(
   "/getAllTutorinChat",
   authenticateToken,
   isUser,
@@ -80,12 +71,6 @@ bookingRouter.get(
   authenticateToken,
   isTutor,
   getTutorChatBookings
-);
-bookingRouter.get(
-  "/getAllStudentinChat",
-  authenticateToken,
-  isTutor,
-  getAllStudentinChat
 );
 
 module.exports = bookingRouter;

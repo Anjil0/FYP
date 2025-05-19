@@ -194,6 +194,14 @@ const TutorDashboard = () => {
 
     if (!startTimeStr || !endTimeStr) return false;
 
+    const todayDay = today
+      .toLocaleDateString("en-US", { weekday: "long" })
+      .slice(0, 3);
+    const sessionDay = session.dayName.slice(0, 3);
+    console.log("Today's Day:", todayDay);
+    console.log("Session Day:", sessionDay);
+    if (todayDay !== sessionDay) return false;
+
     const datePart = today.toISOString().split("T")[0];
 
     const convertTo24Hr = (timeStr) => {
@@ -454,19 +462,6 @@ const TutorDashboard = () => {
               {dashboardData?.stats?.totalStudents || 0}
             </h3>
             <p className="text-gray-600">Total Students</p>
-            <div
-              className={`mt-2 text-sm ${
-                isPositiveGrowth(dashboardData?.stats?.studentGrowthRate)
-                  ? "text-green-500"
-                  : "text-red-500"
-              }`}
-            >
-              {isPositiveGrowth(dashboardData?.stats?.studentGrowthRate)
-                ? "+"
-                : ""}
-              {formatPercentage(dashboardData?.stats?.studentGrowthRate || 0)}{" "}
-              from last month
-            </div>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
@@ -484,19 +479,6 @@ const TutorDashboard = () => {
               {dashboardData?.stats?.activeSessions || 0}
             </h3>
             <p className="text-gray-600">Active Sessions</p>
-            <div
-              className={`mt-2 text-sm ${
-                isPositiveGrowth(dashboardData?.stats?.sessionGrowthRate)
-                  ? "text-green-500"
-                  : "text-red-500"
-              }`}
-            >
-              {isPositiveGrowth(dashboardData?.stats?.sessionGrowthRate)
-                ? "+"
-                : ""}
-              {formatPercentage(dashboardData?.stats?.sessionGrowthRate || 0)}{" "}
-              from last month
-            </div>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
@@ -607,9 +589,14 @@ const TutorDashboard = () => {
                           <CalendarCheck className="w-6 h-6 text-blue-500" />
                         </div>
                         <div className="flex-1">
-                          <h4 className="font-medium text-gray-800">
-                            {session.bookName || "Tutoring Session"}
-                          </h4>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-medium text-gray-800">
+                              {session.bookName || "Tutoring Session"}
+                            </h4>
+                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">
+                              {session.dayName}
+                            </span>
+                          </div>
                           <p className="text-gray-600 text-sm">
                             {session.anotherPersonName ||
                               session.studentName ||
@@ -820,9 +807,7 @@ const TutorDashboard = () => {
                   </div>
                   <div className="bg-gradient-to-r from-green-50 to-white p-5 rounded-lg border border-green-100">
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-gray-600 text-sm">
-                        Completed Sessions
-                      </h3>
+                      <h3 className="text-gray-600 text-sm">Total Bookings</h3>
                       <CheckCircle className="w-5 h-5 text-green-500" />
                     </div>
                     <div className="text-2xl font-bold text-gray-800">
@@ -1066,7 +1051,7 @@ const TutorDashboard = () => {
 
               <div className="border-t border-gray-100 pt-4">
                 <Link
-                  to="/profile"
+                  to="/tutorProfile"
                   className="w-full bg-blue-50 text-blue-600 hover:bg-blue-100 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors"
                 >
                   <Settings className="w-4 h-4" />

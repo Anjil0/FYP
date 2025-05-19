@@ -19,7 +19,6 @@ const bookingSchema = new mongoose.Schema(
     },
     specificTimeSlotId: {
       type: mongoose.Schema.Types.ObjectId,
-      required: true,
     },
     startDate: {
       type: Date,

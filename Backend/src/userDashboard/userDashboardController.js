@@ -45,28 +45,6 @@ exports.getDashboardOverview = async (req, res) => {
 };
 
 /**
- * Get upcoming sessions for a student
- */
-exports.getUpcomingSessions = async (req, res) => {
-  try {
-    const studentId = req.user.sub;
-    const upcomingSessions = await getUpcomingSessionsData(studentId);
-    return res.status(200).json({
-      IsSuccess: true,
-      Result: upcomingSessions,
-      ErrorMessage: "",
-    });
-  } catch (error) {
-    console.error("Upcoming sessions error:", error);
-    return res.status(500).json({
-      IsSuccess: false,
-      Result: null,
-      ErrorMessage: "Failed to retrieve upcoming sessions",
-    });
-  }
-};
-
-/**
  * Get recent messages for a student
  */
 exports.getRecentMessages = async (req, res) => {
@@ -153,77 +131,6 @@ exports.getSessionAnalytics = async (req, res) => {
     });
   }
 };
-
-async function getUpcomingSessionsData(studentId) {
-  const now = moment();
-  const todayWeekday = moment().format("dddd");
-
-  // Fetch active ongoing bookings for the student
-  const upcomingBookings = await BookingModel.find({
-    studentId: new mongoose.Types.ObjectId(studentId),
-    status: "ongoing",
-    isActive: true,
-  })
-    .populate({
-      path: "tutorId",
-      select: "username image",
-    })
-    .populate({
-      path: "studentId",
-      select: "username",
-    })
-    .populate({
-      path: "timeSlotId",
-      select: "timeSlots daysOfWeek subjectName fee",
-    })
-    .sort({ startDate: 1 })
-    .limit(5);
-
-  // Filter bookings for today's weekday
-  const filteredBookings = upcomingBookings.filter((booking) =>
-    booking.timeSlotId.daysOfWeek.includes(todayWeekday)
-  );
-
-  // Format data for frontend
-  const upcomingSessions = filteredBookings
-    .map((booking) => {
-      const timeSlotDetails = booking.timeSlotId.timeSlots.find(
-        (slot) => slot._id.toString() === booking.specificTimeSlotId.toString()
-      );
-
-      if (!timeSlotDetails) return null;
-
-      // Convert stored 12-hour time format to moment.js time
-      const sessionStartTime = moment(timeSlotDetails.startTime, "h:mm A");
-      const sessionEndTime = moment(timeSlotDetails.endTime, "h:mm A");
-
-      // Exclude if the session's end time has already passed
-      if (now.isAfter(sessionEndTime)) return null;
-
-      return {
-        _id: booking._id,
-        tutorId: booking.tutorId._id,
-        tutorName: booking.tutorId.username,
-        tutorImage: booking.tutorId.image,
-        startDate: booking.startDate,
-        endDate: booking.endDate,
-        bookName: booking.timeSlotId.subjectName,
-        status: booking.status,
-        paymentStatus: booking.paymentStatus,
-        todayWeekday,
-        timeSlotDetails: {
-          _id: booking.specificTimeSlotId,
-          startTime: timeSlotDetails.startTime,
-          endTime: timeSlotDetails.endTime,
-        },
-        yourName: booking.studentId.username,
-        anotherPersonName: booking.tutorId.username,
-      };
-    })
-    .filter((session) => session !== null);
-
-  return { sessions: upcomingSessions };
-}
 
 async function getRecentMessagesData(studentId) {
   // Get recent messages grouped by booking/tutor
@@ -438,15 +345,153 @@ async function getAnalyticsData(studentId) {
   };
 }
 
-// Utility function to convert 24-hour time to 12-hour format
-function convertTo12HourFormat(time24) {
-  // Parse the 24-hour time
-  const [hours24, minutes] = time24.split(":").map((num) => parseInt(num, 10));
-  // Determine period (AM/PM)
-  const period = hours24 >= 12 ? "PM" : "AM";
-  // Convert hours to 12-hour format
-  let hours12 = hours24 % 12;
-  hours12 = hours12 === 0 ? 12 : hours12; // Convert 0 to 12 for 12 AM
-  // Format the time string
-  return `${hours12}:${minutes.toString().padStart(2, "0")} ${period}`;
+/**
+ * Get upcoming sessions for a student
+ */
+exports.getUpcomingSessions = async (req, res) => {
+  try {
+    const studentId = req.user.sub;
+    const upcomingSessions = await getUpcomingSessionsData(studentId);
+    return res.status(200).json({
+      IsSuccess: true,
+      Result: upcomingSessions,
+      ErrorMessage: "",
+    });
+  } catch (error) {
+    console.error("Upcoming sessions error:", error);
+    return res.status(500).json({
+      IsSuccess: false,
+      Result: null,
+      ErrorMessage: "Failed to retrieve upcoming sessions",
+    });
+  }
+};
+
+async function getUpcomingSessionsData(studentId) {
+  const now = moment();
+
+  // Fetch active ongoing bookings for the student
+  const upcomingBookings = await BookingModel.find({
+    studentId: new mongoose.Types.ObjectId(studentId),
+    status: "ongoing",
+    teachingMode: "online",
+    isActive: true,
+  })
+    .populate({
+      path: "tutorId",
+      select: "username image",
+    })
+    .populate({
+      path: "studentId",
+      select: "username",
+    })
+    .populate({
+      path: "timeSlotId",
+      select: "timeSlots daysOfWeek subjectName fee",
+    })
+    .sort({ startDate: 1 });
+
+  let allSessions = [];
+
+  for (const booking of upcomingBookings) {
+    const timeSlotDetails = booking.timeSlotId.timeSlots.find(
+      (slot) => slot._id.toString() === booking.specificTimeSlotId.toString()
+    );
+
+    if (!timeSlotDetails) continue;
+
+    const startTime = moment(timeSlotDetails.startTime, "h:mm A");
+    const endTime = moment(timeSlotDetails.endTime, "h:mm A");
+
+    // Generate up to 4 future sessions
+    const futureSessions = findNextMultipleSessionDates(
+      booking.timeSlotId.daysOfWeek,
+      startTime,
+      endTime,
+      4
+    );
+
+    futureSessions.forEach((session) => {
+      const { sessionStartTime, sessionEndTime } = session;
+
+      if (now.isAfter(sessionEndTime)) return;
+
+      allSessions.push({
+        _id: booking._id,
+        tutorId: booking.tutorId._id,
+        tutorName: booking.tutorId.username,
+        tutorImage: booking.tutorId.image,
+        startDate: booking.startDate,
+        endDate: booking.endDate,
+        bookName: booking.timeSlotId.subjectName,
+        status: booking.status,
+        paymentStatus: booking.paymentStatus,
+        nextSessionDate: sessionStartTime.format("YYYY-MM-DD"),
+        dayName: sessionStartTime.format("dddd"),
+        timeSlotDetails: {
+          _id: booking.specificTimeSlotId,
+          startTime: timeSlotDetails.startTime,
+          endTime: timeSlotDetails.endTime,
+          nextStartTime: sessionStartTime.format("YYYY-MM-DD HH:mm:ss"),
+          nextEndTime: sessionEndTime.format("YYYY-MM-DD HH:mm:ss"),
+        },
+        yourName: booking.studentId.username,
+        anotherPersonName: booking.tutorId.username,
+      });
+    });
+  }
+
+  // Sort by time and limit to 4
+  const upcomingSessions = allSessions
+    .sort((a, b) =>
+      moment(a.timeSlotDetails.nextStartTime).diff(
+        moment(b.timeSlotDetails.nextStartTime)
+      )
+    )
+    .slice(0, 4);
+
+  return { sessions: upcomingSessions };
+}
+
+function findNextMultipleSessionDates(daysOfWeek, startTime, endTime, count) {
+  const now = moment();
+  const weekdays = [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+  ];
+  const sessionDays = daysOfWeek.map((day) => weekdays.indexOf(day));
+  let futureSessions = [];
+
+  let dayOffset = 0;
+  while (futureSessions.length < count && dayOffset < 30) {
+    const checkDate = moment().add(dayOffset, "days");
+    const checkDay = checkDate.day();
+
+    if (sessionDays.includes(checkDay)) {
+      const sessionStartTime = checkDate
+        .clone()
+        .hour(startTime.hour())
+        .minute(startTime.minute())
+        .second(0);
+
+      const sessionEndTime = checkDate
+        .clone()
+        .hour(endTime.hour())
+        .minute(endTime.minute())
+        .second(0);
+
+      if (sessionEndTime.isAfter(now)) {
+        futureSessions.push({ sessionStartTime, sessionEndTime });
+      }
+    }
+
+    dayOffset++;
+  }
+
+  return futureSessions;
 }

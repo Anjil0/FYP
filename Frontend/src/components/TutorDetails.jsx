@@ -412,7 +412,11 @@ const TutorDetails = () => {
             </div>
 
             {/* Time Slot Booking Section */}
-            <TimeSlotBooking tutorId={id} timeSlots={timeSlots} />
+            <TimeSlotBooking
+              tutorId={id}
+              timeSlots={timeSlots}
+              isAvailable={tutor.isAvailable}
+            />
           </div>
         </div>
       </div>

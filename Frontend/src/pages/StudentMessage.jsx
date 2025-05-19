@@ -14,8 +14,10 @@ import {
 import { format } from "date-fns";
 import socket from "../socket";
 import { debounce } from "lodash";
+import { useSearchParams } from "react-router-dom";
 
 const StudentMessagePage = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [tutors, setTutors] = useState([]);
   const [selectedTutor, setSelectedTutor] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -74,7 +76,7 @@ const StudentMessagePage = () => {
                   : "text-blue-100"
               }`}
             >
-              {format(new Date(message.createdAt), "HH:mm")}
+              {format(new Date(message.createdAt), "hh:mm a")}
               {message.senderId !== selectedTutor.tutorId._id &&
                 (message.read ? (
                   <CheckCheck className="w-3.5 h-3.5" />
@@ -202,10 +204,20 @@ const StudentMessagePage = () => {
         );
 
         if (response.data.IsSuccess) {
-          const activeBookings = response.data.Result.bookings.filter(
-            (booking) => booking.status === "ongoing"
-          );
+          const activeBookings = response.data.Result.bookings;
           setTutors(activeBookings);
+
+          // Check for bookingId in URL params and select that tutor
+          const bookingId = searchParams.get("id");
+          if (bookingId) {
+            const selectedBooking = activeBookings.find(
+              (booking) => booking._id === bookingId
+            );
+            if (selectedBooking) {
+              setSelectedTutor(selectedBooking);
+              setActiveBookingId(bookingId);
+            }
+          }
         }
       } catch (error) {
         if (error.response && error.response.data) {
@@ -221,7 +233,7 @@ const StudentMessagePage = () => {
       }
     };
     fetchTutors();
-  }, []);
+  }, [searchParams]);
 
   useEffect(() => {
     if (selectedTutor && activeBookingId) {
@@ -389,6 +401,7 @@ const StudentMessagePage = () => {
                       onClick={() => {
                         setSelectedTutor(booking);
                         setActiveBookingId(booking._id);
+                        setSearchParams({ id: booking._id });
                       }}
                       className={`p-4 cursor-pointer transition-all hover:bg-gray-50
                         ${
@@ -440,7 +453,7 @@ const StudentMessagePage = () => {
                         />
                         <StatusIndicator
                           userId={selectedTutor.tutorId?._id}
-                          size="large"
+                          size="small"
                         />
                       </div>
                       <div>
